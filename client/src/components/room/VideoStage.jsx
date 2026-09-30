@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
 import { useAuth } from '../../context/AuthContext';
+import { useStream } from '../../context/StreamContext';
 import { FloatingReactionsOverlay } from './ReactionLayer';
 import PlaybackControls from './PlaybackControls';
 import VideoContentPicker from './VideoContentPicker';
@@ -53,6 +54,7 @@ export default function VideoStage() {
   } = useRoom();
 
   const { currentUser } = useAuth();
+  const { startBroadcast, stopBroadcast, remoteStream, requestStreamFromHost } = useStream();
 
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -118,6 +120,39 @@ export default function VideoStage() {
     }
   }, [playback, currentVideo, needsLocalFile, setSyncStatus]);
 
+  // When host is playing a local video, capture and broadcast stream via WebRTC P2P
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isHost || currentVideo?.type !== 'local') return;
+
+    const setupCapture = () => {
+      try {
+        let stream = null;
+        if (typeof video.captureStream === 'function') {
+          stream = video.captureStream();
+        } else if (typeof video.mozCaptureStream === 'function') {
+          stream = video.mozCaptureStream();
+        }
+        if (stream) {
+          startBroadcast(stream, 'local_video', currentVideo.title);
+        }
+      } catch (err) {
+        console.warn('[VideoStage] captureStream error:', err);
+      }
+    };
+
+    video.addEventListener('loadeddata', setupCapture, { once: true });
+    video.addEventListener('play', setupCapture, { once: true });
+    if (video.readyState >= 2) {
+      setupCapture();
+    }
+
+    return () => {
+      video.removeEventListener('loadeddata', setupCapture);
+      video.removeEventListener('play', setupCapture);
+    };
+  }, [isHost, currentVideo?.id, currentVideo?.type, startBroadcast]);
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       setCurrentTime(videoRef.current.currentTime);
@@ -133,7 +168,7 @@ export default function VideoStage() {
 
   const handleVideoError = (e) => {
     // Only show error if an accessible video is actually loaded
-    if (currentVideo && activeVideoUrl && !needsLocalFile) {
+    if (currentVideo && activeVideoUrl && isHost) {
       console.warn('[VideoStage] Video error event:', e);
       setVideoError("We couldn't load this video stream. Try another source or check the URL.");
     }
@@ -288,43 +323,64 @@ export default function VideoStage() {
             );
           }
 
-          /* Local Video Guest Companion: When host loaded a local file and guest hasn't loaded their local copy yet */
-          if (currentVideo?.type === 'local' && needsLocalFile) {
+          /* Guest Live Stream from Host via WebRTC P2P */
+          if (currentVideo?.type === 'local' && !isHost && !guestLocalFileUrl) {
+            const hostName = participants?.find(p => p.id === room?.hostId)?.name || 'Host';
+
             return (
-              <div className="flex flex-col items-center justify-center p-6 text-center max-w-md my-auto">
-                <div className="w-14 h-14 rounded-2xl bg-watchmate-online/15 border border-watchmate-online/30 flex items-center justify-center text-watchmate-online mb-3 shadow-[0_0_20px_rgba(34,197,94,0.25)]">
-                  <Film className="w-7 h-7" />
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-watchmate-online/15 border border-watchmate-online/30 text-watchmate-online text-[10px] font-bold uppercase tracking-wider mb-2">
-                  Local Movie Sync Mode
-                </span>
-                <h3 className="font-display font-bold text-lg sm:text-xl text-watchmate-text mb-1 line-clamp-1">
-                  {currentVideo.title}
-                </h3>
-                <p className="text-xs text-watchmate-secondaryText mb-5 leading-relaxed">
-                  The host loaded a local movie file. Select your copy of this video on your device to sync playback in 100% full HD with zero buffering.
-                </p>
-
-                <label className="btn-primary px-6 py-3 rounded-2xl text-xs font-bold cursor-pointer shadow-xl flex items-center gap-2 mb-3 hover:scale-105 active:scale-95 transition-all">
-                  <Upload className="w-4 h-4" />
-                  <span>Select Video File on this Device</span>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={handleGuestLocalFileUpload}
-                    className="hidden"
+              <div className="w-full h-full relative flex items-center justify-center bg-black">
+                {remoteStream ? (
+                  <video
+                    ref={(el) => {
+                      if (el && remoteStream && el.srcObject !== remoteStream) {
+                        el.srcObject = remoteStream;
+                        el.play().catch(e => console.warn('[VideoStage] Remote video autoplay error:', e));
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    className={`w-full h-full ${getVideoObjectFitClass()}`}
                   />
-                </label>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-6 text-center max-w-md my-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                      <Film className="w-7 h-7 animate-pulse" />
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-watchmate-cyan/15 border border-watchmate-cyan/30 text-watchmate-cyan text-[10px] font-bold uppercase tracking-wider mb-2">
+                      Live Video Stream (P2P)
+                    </span>
+                    <h3 className="font-display font-bold text-lg sm:text-xl text-watchmate-text mb-1 line-clamp-1">
+                      {currentVideo.title}
+                    </h3>
+                    <p className="text-xs text-watchmate-secondaryText mb-4 leading-relaxed max-w-xs">
+                      Connecting live video stream from {hostName}'s PC...
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-watchmate-cyan font-medium">
+                      <span className="w-2 h-2 rounded-full bg-watchmate-cyan animate-ping" />
+                      <span>Buffering live frames...</span>
+                    </div>
 
-                <div className="flex items-center gap-1.5 text-[11px] text-watchmate-muted">
-                  <span>Don't have the file?</span>
-                  <button 
-                    onClick={() => openContentPicker('screen')} 
-                    className="text-watchmate-cyan hover:underline font-semibold"
-                  >
-                    Host can Stream Live via Screen Share
-                  </button>
-                </div>
+                    <div className="mt-5 pt-3 border-t border-watchmate-border/60">
+                      <label className="text-[11px] text-watchmate-muted hover:text-watchmate-cyan cursor-pointer transition-colors flex items-center gap-1.5">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Have the file on your device? Pick local copy for 0 bandwidth</span>
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={handleGuestLocalFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtitles Overlay */}
+                <SubtitlesOverlay 
+                  cues={subtitleCues}
+                  currentTime={currentTime}
+                  isVisible={isSubtitlesVisible}
+                />
               </div>
             );
           }

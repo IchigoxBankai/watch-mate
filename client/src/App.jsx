@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RoomProvider } from './context/RoomContext';
+import { StreamProvider } from './context/StreamContext';
 import { VoiceProvider } from './context/VoiceContext';
 import { ChatProvider } from './context/ChatContext';
 import Navbar from './components/Navbar';
@@ -22,9 +23,10 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <RoomProvider>
-          <VoiceProvider>
-            <ChatProvider>
-              <div className="min-h-screen bg-syncora-bg text-syncora-text flex flex-col font-sans">
+          <StreamProvider>
+            <VoiceProvider>
+              <ChatProvider>
+                <div className="min-h-screen bg-syncora-bg text-syncora-text flex flex-col font-sans">
                 <Toast />
                 <Navbar />
                 <div className="flex-1 flex flex-col">
@@ -43,8 +45,9 @@ export default function App() {
               </div>
             </ChatProvider>
           </VoiceProvider>
-        </RoomProvider>
-      </AuthProvider>
-    </BrowserRouter>
+        </StreamProvider>
+      </RoomProvider>
+    </AuthProvider>
+  </BrowserRouter>
   );
 }

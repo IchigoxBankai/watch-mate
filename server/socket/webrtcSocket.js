@@ -79,4 +79,38 @@ export function registerWebRTCHandlers(io, socket) {
       isMuted
     });
   });
+
+  // WebRTC Stream Broadcasting (Local Video & Screen Sharing direct to viewers)
+  socket.on('stream:signal', ({ targetSocketId, signal, fromUserId }) => {
+    if (!targetSocketId) return;
+
+    io.to(targetSocketId).emit('stream:signal', {
+      callerSocketId: socket.id,
+      signal,
+      fromUserId
+    });
+  });
+
+  socket.on('stream:start_broadcast', ({ roomId, streamType, title }) => {
+    socket.to(roomId).emit('stream:broadcast_started', {
+      broadcasterSocketId: socket.id,
+      streamType,
+      title
+    });
+  });
+
+  socket.on('stream:stop_broadcast', ({ roomId }) => {
+    socket.to(roomId).emit('stream:broadcast_stopped');
+  });
+
+  socket.on('stream:request_stream', ({ roomId }) => {
+    const room = roomManager.getRoom(roomId);
+    if (!room) return;
+    const host = room.participants.get(room.hostId);
+    if (host && host.socketId && host.socketId !== socket.id) {
+      io.to(host.socketId).emit('stream:stream_requested', {
+        requesterSocketId: socket.id
+      });
+    }
+  });
 }

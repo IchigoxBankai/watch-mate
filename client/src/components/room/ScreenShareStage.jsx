@@ -1,19 +1,23 @@
 import React, { useRef, useEffect } from 'react';
 import { Monitor, StopCircle, Volume2, AlertCircle, Film } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
+import { useStream } from '../../context/StreamContext';
 
 export default function ScreenShareStage({ stream, isSharing, onStopSharing, volume = 1.0, isMuted = false }) {
   const videoRef = useRef(null);
   const { openContentPicker } = useRoom();
+  const { remoteStream } = useStream();
+
+  const activeStream = stream || remoteStream;
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    if (videoRef.current && activeStream) {
+      videoRef.current.srcObject = activeStream;
       videoRef.current.play().catch(e => {
         console.warn('Screen share autoplay error:', e);
       });
     }
-  }, [stream]);
+  }, [activeStream]);
 
   useEffect(() => {
     if (videoRef.current) {
