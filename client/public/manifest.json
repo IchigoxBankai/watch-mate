@@ -1,0 +1,22 @@
+{
+  "short_name": "WatchMate",
+  "name": "WatchMate — Watch Together. Stay Connected.",
+  "description": "Watch shows, videos, anime and movies together with synchronized playback and real-time voice chat.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#07111F",
+  "theme_color": "#07111F",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}
