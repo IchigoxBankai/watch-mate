@@ -12,9 +12,11 @@ import {
   Sparkles,
   Upload,
   Search,
-  Compass
+  Compass,
+  HardDrive
 } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
+import { useAuth } from '../../context/AuthContext';
 import { FloatingReactionsOverlay } from './ReactionLayer';
 import PlaybackControls from './PlaybackControls';
 import VideoContentPicker from './VideoContentPicker';
@@ -47,6 +49,8 @@ export default function VideoStage() {
     showToast
   } = useRoom();
 
+  const { currentUser } = useAuth();
+
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const idleTimeoutRef = useRef(null);
@@ -63,18 +67,28 @@ export default function VideoStage() {
   const [subtitleCues, setSubtitleCues] = useState([]);
   const [isSubtitlesVisible, setIsSubtitlesVisible] = useState(true);
   const [aspectRatio, setAspectRatio] = useState('16:9');
+  
+  // Guest local video file state
+  const [guestLocalFileUrl, setGuestLocalFileUrl] = useState(null);
 
   const SYNC_TOLERANCE = 0.35;
 
-  // Reset video error whenever video source changes
+  // Reset video error and guest local file whenever video source changes
   useEffect(() => {
     setVideoError(null);
-  }, [currentVideo]);
+    setGuestLocalFileUrl(null);
+  }, [currentVideo?.id]);
+
+  // Determine active video URL
+  const isHostOwner = currentVideo?.ownerId === currentUser?.id;
+  const isBlobUrl = currentVideo?.url?.startsWith('blob:');
+  const needsLocalFile = currentVideo?.type === 'local' && isBlobUrl && !isHostOwner && !guestLocalFileUrl;
+  const activeVideoUrl = guestLocalFileUrl || currentVideo?.url;
 
   // Handle Synchronized Playback for HTML5 direct / local video
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !currentVideo || currentVideo.type === 'youtube' || currentVideo.type === 'netflix' || currentVideo.type === 'screen_share') return;
+    if (!video || !currentVideo || currentVideo.type === 'youtube' || currentVideo.type === 'netflix' || currentVideo.type === 'screen_share' || needsLocalFile) return;
 
     if (playback.isPlaying && video.paused) {
       video.play().catch(e => {
@@ -98,7 +112,7 @@ export default function VideoStage() {
         setSyncStatus('synced');
       }, 400);
     }
-  }, [playback, currentVideo, setSyncStatus]);
+  }, [playback, currentVideo, needsLocalFile, setSyncStatus]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
@@ -114,11 +128,21 @@ export default function VideoStage() {
   };
 
   const handleVideoError = (e) => {
-    // Only show error if a video is actually loaded
-    if (currentVideo && currentVideo.url) {
+    // Only show error if an accessible video is actually loaded
+    if (currentVideo && activeVideoUrl && !needsLocalFile) {
       console.warn('[VideoStage] Video error event:', e);
       setVideoError("We couldn't load this video stream. Try another source or check the URL.");
     }
+  };
+
+  const handleGuestLocalFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileUrl = URL.createObjectURL(file);
+    setGuestLocalFileUrl(fileUrl);
+    setVideoError(null);
+    showToast(`Loaded local copy: ${file.name}`, 'success');
   };
 
   const handlePlayPause = useCallback(() => {
@@ -215,7 +239,7 @@ export default function VideoStage() {
         onMouseMove={handleMouseMove}
         onMouseLeave={() => playback.isPlaying && setShowControls(false)}
         className={`relative w-full ${
-          currentVideo ? 'aspect-video' : 'min-h-[360px] sm:min-h-[400px] aspect-auto sm:aspect-video'
+          currentVideo && !needsLocalFile ? 'aspect-video' : 'min-h-[360px] sm:min-h-[400px] aspect-auto sm:aspect-video'
         } bg-[#050C16] rounded-3xl overflow-hidden border border-watchmate-border shadow-[0_0_50px_-10px_rgba(37,99,235,0.25)] group flex items-center justify-center select-none`}
       >
         {/* Floating Reactions Layer */}
@@ -260,12 +284,53 @@ export default function VideoStage() {
             );
           }
 
+          /* Local Video Guest Companion: When host loaded a local file and guest hasn't loaded their local copy yet */
+          if (currentVideo?.type === 'local' && needsLocalFile) {
+            return (
+              <div className="flex flex-col items-center justify-center p-6 text-center max-w-md my-auto">
+                <div className="w-14 h-14 rounded-2xl bg-watchmate-online/15 border border-watchmate-online/30 flex items-center justify-center text-watchmate-online mb-3 shadow-[0_0_20px_rgba(34,197,94,0.25)]">
+                  <Film className="w-7 h-7" />
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-watchmate-online/15 border border-watchmate-online/30 text-watchmate-online text-[10px] font-bold uppercase tracking-wider mb-2">
+                  Local Movie Sync Mode
+                </span>
+                <h3 className="font-display font-bold text-lg sm:text-xl text-watchmate-text mb-1 line-clamp-1">
+                  {currentVideo.title}
+                </h3>
+                <p className="text-xs text-watchmate-secondaryText mb-5 leading-relaxed">
+                  The host loaded a local movie file. Select your copy of this video on your device to sync playback in 100% full HD with zero buffering.
+                </p>
+
+                <label className="btn-primary px-6 py-3 rounded-2xl text-xs font-bold cursor-pointer shadow-xl flex items-center gap-2 mb-3 hover:scale-105 active:scale-95 transition-all">
+                  <Upload className="w-4 h-4" />
+                  <span>Select Video File on this Device</span>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleGuestLocalFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-watchmate-muted">
+                  <span>Don't have the file?</span>
+                  <button 
+                    onClick={() => openContentPicker('screen')} 
+                    className="text-watchmate-cyan hover:underline font-semibold"
+                  >
+                    Host can Stream Live via Screen Share
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
           if (currentVideo) {
             return (
               <div className="w-full h-full relative flex items-center justify-center bg-black">
                 <video
                   ref={videoRef}
-                  src={currentVideo.url}
+                  src={activeVideoUrl}
                   playsInline
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
@@ -366,8 +431,8 @@ export default function VideoStage() {
           );
         })()}
 
-        {/* Video Load Error Overlay (only shown if a video failed) */}
-        {videoError && currentVideo && (
+        {/* Video Load Error Overlay (only shown if an accessible video failed) */}
+        {videoError && currentVideo && !needsLocalFile && (
           <div className="absolute inset-0 bg-[#07111F]/90 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center">
             <AlertCircle className="w-10 h-10 text-watchmate-error mb-2" />
             <p className="text-sm font-semibold text-watchmate-text mb-4">{videoError}</p>
@@ -451,7 +516,7 @@ export default function VideoStage() {
         )}
 
         {/* Playback Controls Overlay (bottom) for Local / Direct MP4 */}
-        {currentVideo && currentVideo.type !== 'youtube' && currentVideo.type !== 'netflix' && currentVideo.type !== 'screen_share' && (
+        {currentVideo && currentVideo.type !== 'youtube' && currentVideo.type !== 'netflix' && currentVideo.type !== 'screen_share' && !needsLocalFile && (
           <div className={`absolute bottom-0 inset-x-0 z-20 transition-opacity duration-300 ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}>
