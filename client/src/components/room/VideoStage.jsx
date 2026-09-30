@@ -14,7 +14,8 @@ import {
   Search,
   Compass,
   HardDrive,
-  Crown
+  Crown,
+  Volume2
 } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
 import { useAuth } from '../../context/AuthContext';
@@ -75,6 +76,8 @@ export default function VideoStage() {
   
   // Guest local video file state
   const [guestLocalFileUrl, setGuestLocalFileUrl] = useState(null);
+  const [isGuestMuted, setIsGuestMuted] = useState(false);
+  const remoteVideoRef = useRef(null);
 
   const SYNC_TOLERANCE = 0.35;
 
@@ -91,34 +94,19 @@ export default function VideoStage() {
   const needsLocalFile = currentVideo?.type === 'local' && isBlobUrl && !isHost && !guestLocalFileUrl;
   const activeVideoUrl = guestLocalFileUrl || currentVideo?.url;
 
-  // Handle Synchronized Playback for HTML5 direct / local video
+  // Handle remote WebRTC stream on guest device
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !currentVideo || currentVideo.type === 'youtube' || currentVideo.type === 'netflix' || currentVideo.type === 'screen_share' || needsLocalFile) return;
-
-    if (playback.isPlaying && video.paused) {
-      video.play().catch(e => {
-        console.warn('[VideoStage] Auto-play was blocked or waiting for user interaction:', e);
+    const video = remoteVideoRef.current;
+    if (video && remoteStream && !isHost) {
+      video.srcObject = remoteStream;
+      video.play().catch(err => {
+        console.warn('[VideoStage] Unmuted autoplay blocked on mobile, muting to start frames:', err);
+        video.muted = true;
+        setIsGuestMuted(true);
+        video.play().catch(e => console.warn('Muted play also failed:', e));
       });
-    } else if (!playback.isPlaying && !video.paused) {
-      video.pause();
     }
-
-    let targetTime = playback.currentTime || 0;
-    if (playback.isPlaying && playback.lastUpdatedAt) {
-      const elapsed = (Date.now() - playback.lastUpdatedAt) / 1000;
-      targetTime += elapsed;
-    }
-
-    const drift = Math.abs(video.currentTime - targetTime);
-    if (drift > SYNC_TOLERANCE) {
-      setSyncStatus('syncing');
-      video.currentTime = targetTime;
-      setTimeout(() => {
-        setSyncStatus('synced');
-      }, 400);
-    }
-  }, [playback, currentVideo, needsLocalFile, setSyncStatus]);
+  }, [remoteStream, isHost]);
 
   // When host is playing a local video, capture and broadcast stream via WebRTC P2P
   useEffect(() => {
@@ -129,9 +117,9 @@ export default function VideoStage() {
       try {
         let stream = null;
         if (typeof video.captureStream === 'function') {
-          stream = video.captureStream();
+          stream = video.captureStream(30);
         } else if (typeof video.mozCaptureStream === 'function') {
-          stream = video.mozCaptureStream();
+          stream = video.mozCaptureStream(30);
         }
         if (stream) {
           startBroadcast(stream, 'local_video', currentVideo.title);
@@ -141,14 +129,16 @@ export default function VideoStage() {
       }
     };
 
-    video.addEventListener('loadeddata', setupCapture, { once: true });
-    video.addEventListener('play', setupCapture, { once: true });
-    if (video.readyState >= 2) {
+    video.addEventListener('loadedmetadata', setupCapture);
+    video.addEventListener('canplay', setupCapture);
+    video.addEventListener('play', setupCapture);
+    if (video.readyState >= 1) {
       setupCapture();
     }
 
     return () => {
-      video.removeEventListener('loadeddata', setupCapture);
+      video.removeEventListener('loadedmetadata', setupCapture);
+      video.removeEventListener('canplay', setupCapture);
       video.removeEventListener('play', setupCapture);
     };
   }, [isHost, currentVideo?.id, currentVideo?.type, startBroadcast]);
@@ -328,19 +318,41 @@ export default function VideoStage() {
             const hostName = participants?.find(p => p.id === room?.hostId)?.name || 'Host';
 
             return (
-              <div className="w-full h-full relative flex items-center justify-center bg-black">
+              <div className="w-full h-full relative flex items-center justify-center bg-black overflow-hidden">
                 {remoteStream ? (
-                  <video
-                    ref={(el) => {
-                      if (el && remoteStream && el.srcObject !== remoteStream) {
-                        el.srcObject = remoteStream;
-                        el.play().catch(e => console.warn('[VideoStage] Remote video autoplay error:', e));
-                      }
-                    }}
-                    autoPlay
-                    playsInline
-                    className={`w-full h-full ${getVideoObjectFitClass()}`}
-                  />
+                  <>
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted={isGuestMuted}
+                      className={`w-full h-full ${getVideoObjectFitClass()} cursor-pointer`}
+                      onClick={() => {
+                        if (remoteVideoRef.current) {
+                          remoteVideoRef.current.muted = false;
+                          setIsGuestMuted(false);
+                          remoteVideoRef.current.play().catch(() => {});
+                        }
+                      }}
+                    />
+
+                    {/* Mobile Unmute Overlay if muted by browser autoplay policy */}
+                    {isGuestMuted && (
+                      <button
+                        onClick={() => {
+                          if (remoteVideoRef.current) {
+                            remoteVideoRef.current.muted = false;
+                            setIsGuestMuted(false);
+                            remoteVideoRef.current.play().catch(() => {});
+                          }
+                        }}
+                        className="absolute bottom-4 z-30 px-4 py-2 rounded-full bg-watchmate-primary/95 hover:bg-watchmate-primary text-white text-xs font-bold shadow-2xl flex items-center gap-2 border border-white/20 animate-bounce cursor-pointer backdrop-blur-md"
+                      >
+                        <Volume2 className="w-4 h-4" />
+                        <span>Tap to Unmute Audio</span>
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-6 text-center max-w-md my-auto">
                     <div className="w-14 h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
