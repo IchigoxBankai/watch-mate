@@ -141,8 +141,8 @@ export function registerSyncHandlers(io, socket) {
     const userMeta = roomManager.userSocketMap.get(socket.id);
     if (!userMeta) return;
 
-    if (room.settings.hostOnlyControl && room.hostId !== userMeta.userId) {
-      socket.emit('room:notification', { type: 'warning', message: 'Only the host can change video' });
+    if (room.hostId !== userMeta.userId) {
+      socket.emit('room:notification', { type: 'warning', message: 'Only the host can choose or change the video' });
       return;
     }
 

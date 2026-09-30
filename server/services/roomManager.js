@@ -109,6 +109,23 @@ class RoomManager {
     return { room, leftUser, newHostId: room.hostId };
   }
 
+  transferHost(roomId, currentUserId, targetUserId) {
+    const room = this.rooms.get(roomId);
+    if (!room) return null;
+    if (room.hostId !== currentUserId) return null;
+
+    const targetUser = room.participants.get(targetUserId);
+    if (!targetUser) return null;
+
+    const oldHost = room.participants.get(currentUserId);
+    if (oldHost) oldHost.isHost = false;
+
+    room.hostId = targetUserId;
+    targetUser.isHost = true;
+
+    return { room, oldHost, newHost: targetUser };
+  }
+
   updatePlayback(roomId, { isPlaying, currentTime, playbackRate, updatedBy }) {
     const room = this.rooms.get(roomId);
     if (!room) return null;

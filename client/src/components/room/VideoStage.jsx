@@ -13,7 +13,8 @@ import {
   Upload,
   Search,
   Compass,
-  HardDrive
+  HardDrive,
+  Crown
 } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
 import { useAuth } from '../../context/AuthContext';
@@ -28,6 +29,8 @@ import CountdownOverlay from './CountdownOverlay';
 
 export default function VideoStage() {
   const { 
+    room,
+    participants,
     currentVideo, 
     playback, 
     isSyncingRef, 
@@ -79,10 +82,11 @@ export default function VideoStage() {
     setGuestLocalFileUrl(null);
   }, [currentVideo?.id]);
 
-  // Determine active video URL
+  // Determine active video URL and host status
+  const isHost = room?.hostId === currentUser?.id;
   const isHostOwner = currentVideo?.ownerId === currentUser?.id;
   const isBlobUrl = currentVideo?.url?.startsWith('blob:');
-  const needsLocalFile = currentVideo?.type === 'local' && isBlobUrl && !isHostOwner && !guestLocalFileUrl;
+  const needsLocalFile = currentVideo?.type === 'local' && isBlobUrl && !isHost && !guestLocalFileUrl;
   const activeVideoUrl = guestLocalFileUrl || currentVideo?.url;
 
   // Handle Synchronized Playback for HTML5 direct / local video
@@ -349,7 +353,31 @@ export default function VideoStage() {
             );
           }
 
-          /* Premium Empty Stage State: Choose Your Stream (Mobile Optimized) */
+          /* Premium Empty Stage State */
+          if (!isHost) {
+            const hostParticipant = participants?.find(p => p.id === room?.hostId);
+            const hostDisplayName = hostParticipant ? hostParticipant.name : 'The Room Host';
+
+            return (
+              <div className="flex flex-col items-center justify-center p-6 text-center max-w-md w-full my-auto">
+                <div className="w-14 h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                  <Tv className="w-7 h-7 animate-pulse" />
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-watchmate-elevated border border-watchmate-border text-xs text-watchmate-secondaryText mb-3">
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Host: <strong className="text-watchmate-text">{hostDisplayName}</strong></span>
+                </div>
+                <h3 className="font-display font-bold text-lg sm:text-xl text-watchmate-text mb-1.5">
+                  Waiting for Stream
+                </h3>
+                <p className="text-xs text-watchmate-secondaryText leading-relaxed max-w-sm">
+                  {hostDisplayName} is choosing a stream or video. When they start playing, it will appear here in real-time sync.
+                </p>
+              </div>
+            );
+          }
+
+          /* Host Stream Launcher (Mobile Optimized) */
           return (
             <div className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 text-center max-w-xl w-full my-auto">
               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-2 sm:mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
@@ -359,7 +387,7 @@ export default function VideoStage() {
                 Choose Your Stream
               </h3>
               <p className="text-[11px] sm:text-xs text-watchmate-secondaryText mb-4 sm:mb-6 max-w-md px-2 leading-relaxed">
-                Select a streaming source to watch synchronously with everyone in the room.
+                As the room host, select a streaming source to broadcast and watch synchronously with everyone.
               </p>
 
               {/* Quick Stream Launcher Cards */}
@@ -436,12 +464,14 @@ export default function VideoStage() {
           <div className="absolute inset-0 bg-[#07111F]/90 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center">
             <AlertCircle className="w-10 h-10 text-watchmate-error mb-2" />
             <p className="text-sm font-semibold text-watchmate-text mb-4">{videoError}</p>
-            <button
-              onClick={() => { setVideoError(null); openContentPicker('youtube'); }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-watchmate-surface border border-watchmate-border hover:bg-watchmate-elevated text-watchmate-text"
-            >
-              Choose Another Stream
-            </button>
+            {isHost && (
+              <button
+                onClick={() => { setVideoError(null); openContentPicker('youtube'); }}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-watchmate-surface border border-watchmate-border hover:bg-watchmate-elevated text-watchmate-text"
+              >
+                Choose Another Stream
+              </button>
+            )}
           </div>
         )}
 
@@ -501,17 +531,19 @@ export default function VideoStage() {
               )}
             </div>
 
-            {/* Change Stream Quick Action Button */}
-            <div className="flex items-center gap-2 pointer-events-auto shrink-0">
-              <button
-                onClick={() => openContentPicker(currentVideo.type || 'youtube')}
-                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#07111F]/85 hover:bg-watchmate-surface backdrop-blur-md border border-watchmate-border hover:border-watchmate-cyan/50 text-white text-[11px] sm:text-xs font-semibold shadow-lg transition-all"
-                title="Change Video / Stream Source"
-              >
-                <Film className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
-                <span className="hidden xs:inline">Change Stream</span>
-              </button>
-            </div>
+            {/* Change Stream Quick Action Button (Host Only) */}
+            {isHost && (
+              <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+                <button
+                  onClick={() => openContentPicker(currentVideo.type || 'youtube')}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#07111F]/85 hover:bg-watchmate-surface backdrop-blur-md border border-watchmate-border hover:border-watchmate-cyan/50 text-white text-[11px] sm:text-xs font-semibold shadow-lg transition-all"
+                  title="Change Video / Stream Source"
+                >
+                  <Film className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
+                  <span className="hidden xs:inline">Change Stream</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 

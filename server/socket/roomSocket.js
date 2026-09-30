@@ -78,6 +78,44 @@ export function registerRoomHandlers(io, socket) {
       }
     }
   });
+
+  // Transfer Host Privileges (Host only)
+  socket.on('room:transfer_host', ({ roomId, targetUserId }) => {
+    const userMeta = roomManager.userSocketMap.get(socket.id);
+    if (!userMeta) return;
+
+    const result = roomManager.transferHost(roomId, userMeta.userId, targetUserId);
+    if (!result) {
+      socket.emit('room:error', { message: 'Failed to transfer host privileges' });
+      return;
+    }
+
+    const { newHost, oldHost } = result;
+
+    // Broadcast host transfer to everyone in the room
+    io.to(roomId).emit('room:host_transferred', {
+      newHostId: newHost.id,
+      newHostName: newHost.name,
+      oldHostName: oldHost ? oldHost.name : 'Previous Host'
+    });
+
+    // Broadcast system toast
+    io.to(roomId).emit('room:toast', {
+      message: `${newHost.name} is now the Room Host 👑`,
+      type: 'success'
+    });
+
+    // Chat announcement
+    const msg = roomManager.addMessage(roomId, {
+      senderId: 'system',
+      senderName: 'System',
+      text: `👑 Host privileges transferred to ${newHost.name}`,
+      type: 'system'
+    });
+    if (msg) {
+      io.to(roomId).emit('chat:new_message', msg);
+    }
+  });
 }
 
 function handleLeave(io, socket) {

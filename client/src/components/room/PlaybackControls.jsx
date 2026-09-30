@@ -173,15 +173,17 @@ export default function PlaybackControls({
 
         {/* Right: Change Content, Speed, Fullscreen */}
         <div className="flex items-center gap-2">
-          {/* Change Video Button */}
-          <button
-            onClick={onOpenContentPicker}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-watchmate-surface hover:bg-watchmate-elevated text-watchmate-text border border-watchmate-border transition-all"
-            title="Change Video Source"
-          >
-            <Film className="w-3.5 h-3.5 text-watchmate-cyan" />
-            <span className="hidden sm:inline">Change Video</span>
-          </button>
+          {/* Change Video Button (Host Only) */}
+          {isHost && (
+            <button
+              onClick={onOpenContentPicker}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-watchmate-surface hover:bg-watchmate-elevated text-watchmate-text border border-watchmate-border transition-all"
+              title="Change Video Source"
+            >
+              <Film className="w-3.5 h-3.5 text-watchmate-cyan" />
+              <span className="hidden sm:inline">Change Video</span>
+            </button>
+          )}
 
           {/* Speed Selector */}
           <div className="relative">

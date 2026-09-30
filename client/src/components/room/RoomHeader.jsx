@@ -62,15 +62,17 @@ export default function RoomHeader() {
 
           {/* Right: Change Stream, Participants counter, Invite, Settings, Leave */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Change Stream Button */}
-            <button
-              onClick={() => openContentPicker('youtube')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-watchmate-elevated hover:bg-watchmate-surface border border-watchmate-border hover:border-watchmate-cyan/50 text-watchmate-text shadow-sm transition-all"
-              title="Change streaming content"
-            >
-              <Film className="w-3.5 h-3.5 text-watchmate-cyan" />
-              <span className="hidden sm:inline">Change Stream</span>
-            </button>
+            {/* Change Stream Button (Host Only) */}
+            {isHost && (
+              <button
+                onClick={() => openContentPicker('youtube')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-watchmate-elevated hover:bg-watchmate-surface border border-watchmate-border hover:border-watchmate-cyan/50 text-watchmate-text shadow-sm transition-all"
+                title="Change streaming content"
+              >
+                <Film className="w-3.5 h-3.5 text-watchmate-cyan" />
+                <span className="hidden sm:inline">Change Stream</span>
+              </button>
+            )}
 
             {/* Watchers Counter */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-watchmate-elevated text-xs font-medium text-watchmate-secondaryText border border-watchmate-border">

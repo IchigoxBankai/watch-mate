@@ -93,6 +93,11 @@ export function RoomProvider({ children }) {
     socket.emit('room:kick_participant', { roomId, targetUserId });
   }, [socket, roomId]);
 
+  const emitTransferHost = useCallback((targetUserId) => {
+    if (!roomId) return;
+    socket.emit('room:transfer_host', { roomId, targetUserId });
+  }, [socket, roomId]);
+
   // Join Room flow
   const joinRoom = useCallback(async (targetRoomId, user) => {
     if (!targetRoomId || !user) return;
@@ -294,6 +299,16 @@ export function RoomProvider({ children }) {
       showToast(message, 'error');
     };
 
+    // Host Transferred
+    const handleHostTransferred = ({ newHostId, newHostName }) => {
+      setRoom(prev => prev ? { ...prev, hostId: newHostId } : prev);
+      setParticipants(prev => prev.map(p => ({
+        ...p,
+        isHost: p.id === newHostId
+      })));
+      showToast(`${newHostName} is now the Room Host 👑`, 'success');
+    };
+
     socket.on('room:initial_state', handleInitialState);
     socket.on('room:participant_joined', handleParticipantJoined);
     socket.on('room:participant_left', handleParticipantLeft);
@@ -307,6 +322,7 @@ export function RoomProvider({ children }) {
     socket.on('room:toast', handleServerToast);
     socket.on('room:error', handleRoomError);
     socket.on('room:kicked', handleKicked);
+    socket.on('room:host_transferred', handleHostTransferred);
 
     return () => {
       socket.off('room:initial_state', handleInitialState);
@@ -322,6 +338,7 @@ export function RoomProvider({ children }) {
       socket.off('room:toast', handleServerToast);
       socket.off('room:error', handleRoomError);
       socket.off('room:kicked', handleKicked);
+      socket.off('room:host_transferred', handleHostTransferred);
     };
   }, [socket, showToast, leaveRoom]);
 
@@ -358,6 +375,7 @@ export function RoomProvider({ children }) {
     emitChangeVideo,
     emitUpdateSettings,
     emitKickParticipant,
+    emitTransferHost,
     showToast,
     setSyncStatus,
     setCountdownState

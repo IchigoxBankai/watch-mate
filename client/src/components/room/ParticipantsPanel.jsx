@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useVoice } from '../../context/VoiceContext';
 
 export default function ParticipantsPanel() {
-  const { room, participants, emitKickParticipant } = useRoom();
+  const { room, participants, emitKickParticipant, emitTransferHost } = useRoom();
   const { currentUser } = useAuth();
   const { isSpeakingLocally, speakingUsers, isVoiceConnected, isMuted } = useVoice();
 
@@ -112,16 +112,27 @@ export default function ParticipantsPanel() {
                   </div>
                 </div>
 
-                {/* Actions (Kick if host) */}
-                <div className="flex items-center gap-1.5">
+                {/* Actions (Transfer Host & Kick if host) */}
+                <div className="flex items-center gap-1">
                   {isHost && !isMe && (
-                    <button
-                      onClick={() => emitKickParticipant(p.id)}
-                      title={`Remove ${p.name}`}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-watchmate-muted hover:text-watchmate-error hover:bg-watchmate-surface transition-all"
-                    >
-                      <UserX className="w-3.5 h-3.5" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => emitTransferHost(p.id)}
+                        title={`Make ${p.name} Room Host`}
+                        className="opacity-80 group-hover:opacity-100 px-2 py-1 rounded-lg text-[10px] font-semibold text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 flex items-center gap-1 transition-all"
+                      >
+                        <Crown className="w-3 h-3 text-amber-400" />
+                        <span className="hidden sm:inline">Make Host</span>
+                      </button>
+
+                      <button
+                        onClick={() => emitKickParticipant(p.id)}
+                        title={`Remove ${p.name}`}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-watchmate-muted hover:text-watchmate-error hover:bg-watchmate-surface transition-all"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
