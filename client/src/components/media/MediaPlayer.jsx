@@ -344,13 +344,6 @@ export default function MediaPlayer() {
                   </div>
                 </button>
               </div>
-
-              <button
-                onClick={() => openContentPicker('youtube')}
-                className="btn-primary px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                Open Full Media Selector
-              </button>
             </div>
           );
         })()}
