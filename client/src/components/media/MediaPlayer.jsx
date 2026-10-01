@@ -164,7 +164,11 @@ export default function MediaPlayer() {
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => playback?.isPlaying && setShowControls(false)}
-        className="relative w-full aspect-video min-h-[340px] sm:min-h-[420px] bg-[#050C16] rounded-3xl overflow-hidden border border-watchmate-border shadow-[0_0_50px_-10px_rgba(37,99,235,0.25)] group flex items-center justify-center select-none"
+        className={`relative w-full ${
+          currentVideo 
+            ? 'aspect-video min-h-[220px] sm:min-h-[360px] md:min-h-[460px]' 
+            : 'min-h-[280px] sm:min-h-[380px] aspect-auto sm:aspect-video'
+        } bg-[#050C16] rounded-3xl overflow-hidden border border-watchmate-border shadow-[0_0_50px_-10px_rgba(37,99,235,0.25)] group flex items-center justify-center select-none`}
       >
         {/* Floating Reactions Layer */}
         <FloatingReactionsOverlay />
@@ -227,87 +231,87 @@ export default function MediaPlayer() {
             const hostDisplayName = hostParticipant ? hostParticipant.name : 'The Room Host';
 
             return (
-              <div className="flex flex-col items-center justify-center p-6 text-center max-w-md w-full my-auto">
-                <div className="w-14 h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
-                  <Tv className="w-7 h-7 animate-pulse" />
+              <div className="flex flex-col items-center justify-center p-5 sm:p-6 text-center max-w-md w-full my-auto">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-2.5 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                  <Tv className="w-6 h-6 sm:w-7 sm:h-7 animate-pulse" />
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-watchmate-elevated border border-watchmate-border text-xs text-watchmate-secondaryText mb-3">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-watchmate-elevated border border-watchmate-border text-xs text-watchmate-secondaryText mb-2.5">
                   <Crown className="w-3.5 h-3.5 text-amber-400" />
                   <span>Host: <strong className="text-watchmate-text">{hostDisplayName}</strong></span>
                 </div>
-                <h3 className="font-display font-bold text-lg sm:text-xl text-watchmate-text mb-1.5">
+                <h3 className="font-display font-bold text-base sm:text-xl text-watchmate-text mb-1">
                   Waiting for Stream
                 </h3>
-                <p className="text-xs text-watchmate-secondaryText leading-relaxed max-w-sm">
+                <p className="text-[11px] sm:text-xs text-watchmate-secondaryText leading-relaxed max-w-sm">
                   {hostDisplayName} is choosing media to watch. When they start playback, it will synchronize here in real-time.
                 </p>
               </div>
             );
           }
 
-          // 5. Empty State: Host launcher
+          // 5. Empty State: Host launcher (Mobile optimized)
           return (
-            <div className="flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 text-center max-w-xl w-full my-auto">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-2 sm:mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
-                <Compass className="w-6 h-6 sm:w-7 sm:h-7" />
+            <div className="flex flex-col items-center justify-center p-3.5 sm:p-6 md:p-8 text-center max-w-xl w-full my-auto">
+              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-2 sm:mb-3 shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                <Compass className="w-5 h-5 sm:w-7 sm:h-7" />
               </div>
-              <h3 className="font-display font-bold text-lg sm:text-2xl text-watchmate-text mb-1">
+              <h3 className="font-display font-bold text-base sm:text-2xl text-watchmate-text mb-1">
                 Choose Media to Watch
               </h3>
-              <p className="text-[11px] sm:text-xs text-watchmate-secondaryText mb-4 sm:mb-6 max-w-md px-2 leading-relaxed">
+              <p className="text-[11px] sm:text-xs text-watchmate-secondaryText mb-3 sm:mb-5 max-w-md px-2 leading-relaxed">
                 Select a media source to stream synchronously across all participants in your room.
               </p>
 
-              {/* Quick Stream Launcher Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full mb-4">
+              {/* Quick Stream Launcher Cards - 3 columns on all screen sizes */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full mb-3 sm:mb-4">
                 {/* 1. YouTube */}
                 <button
                   onClick={() => openContentPicker('youtube')}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-watchmate-surface hover:bg-red-950/30 border border-watchmate-border hover:border-red-500/50 flex flex-col items-center justify-center gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  className="p-2 sm:p-3.5 rounded-2xl bg-watchmate-surface hover:bg-red-950/30 border border-watchmate-border hover:border-red-500/50 flex flex-col items-center justify-center gap-1.5 sm:gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
-                    <Video className="w-5 h-5" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-600/15 border border-red-500/30 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                    <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="text-center">
-                    <span className="block text-xs font-bold text-watchmate-text group-hover:text-red-400">YouTube</span>
-                    <span className="text-[10px] text-watchmate-muted">Paste URL or Search</span>
+                    <span className="block text-[11px] sm:text-xs font-bold text-watchmate-text group-hover:text-red-400">YouTube</span>
+                    <span className="text-[9px] sm:text-[10px] text-watchmate-muted hidden xs:inline">Search & URL</span>
                   </div>
                 </button>
 
                 {/* 2. Local Video */}
                 <button
                   onClick={() => openContentPicker('upload')}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-watchmate-surface hover:bg-watchmate-elevated border border-watchmate-border hover:border-watchmate-cyan/50 flex flex-col items-center justify-center gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  className="p-2 sm:p-3.5 rounded-2xl bg-watchmate-surface hover:bg-watchmate-elevated border border-watchmate-border hover:border-watchmate-cyan/50 flex flex-col items-center justify-center gap-1.5 sm:gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-watchmate-online/15 border border-watchmate-online/30 flex items-center justify-center text-watchmate-online group-hover:scale-110 transition-transform">
-                    <Upload className="w-5 h-5" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-watchmate-online/15 border border-watchmate-online/30 flex items-center justify-center text-watchmate-online group-hover:scale-110 transition-transform">
+                    <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="text-center">
-                    <span className="block text-xs font-bold text-watchmate-text group-hover:text-watchmate-cyan">Local Video</span>
-                    <span className="text-[10px] text-watchmate-muted">Upload & Sync Movie</span>
+                    <span className="block text-[11px] sm:text-xs font-bold text-watchmate-text group-hover:text-watchmate-cyan">Local Video</span>
+                    <span className="text-[9px] sm:text-[10px] text-watchmate-muted hidden xs:inline">Upload Movie</span>
                   </div>
                 </button>
 
                 {/* 3. Screen Share */}
                 <button
                   onClick={() => openContentPicker('screen')}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-watchmate-surface hover:bg-watchmate-elevated border border-watchmate-border hover:border-watchmate-cyan/50 flex flex-col items-center justify-center gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  className="p-2 sm:p-3.5 rounded-2xl bg-watchmate-surface hover:bg-watchmate-elevated border border-watchmate-border hover:border-watchmate-cyan/50 flex flex-col items-center justify-center gap-1.5 sm:gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-watchmate-cyan/15 border border-watchmate-cyan/30 flex items-center justify-center text-watchmate-cyan group-hover:scale-110 transition-transform">
-                    <Monitor className="w-5 h-5" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-watchmate-cyan/15 border border-watchmate-cyan/30 flex items-center justify-center text-watchmate-cyan group-hover:scale-110 transition-transform">
+                    <Monitor className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="text-center">
-                    <span className="block text-xs font-bold text-watchmate-text group-hover:text-watchmate-cyan">Screen Share</span>
-                    <span className="text-[10px] text-watchmate-muted">Tab + System Audio</span>
+                    <span className="block text-[11px] sm:text-xs font-bold text-watchmate-text group-hover:text-watchmate-cyan">Screen Share</span>
+                    <span className="text-[9px] sm:text-[10px] text-watchmate-muted hidden xs:inline">Tab + Audio</span>
                   </div>
                 </button>
               </div>
 
               <button
                 onClick={() => openContentPicker('youtube')}
-                className="btn-primary px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="btn-primary px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
               >
-                Open Media Selector
+                Open Full Media Selector
               </button>
             </div>
           );

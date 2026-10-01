@@ -381,27 +381,27 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-4xl bg-gradient-to-b from-watchmate-surface via-watchmate-elevated to-watchmate-bgSecondary border border-watchmate-borderLight rounded-3xl p-5 sm:p-7 shadow-[0_20px_70px_rgba(37,99,235,0.35)] overflow-hidden flex flex-col max-h-[92vh]"
+          className="relative w-full max-w-4xl bg-gradient-to-b from-watchmate-surface via-watchmate-elevated to-watchmate-bgSecondary border border-watchmate-borderLight rounded-3xl p-4 sm:p-7 shadow-[0_20px_70px_rgba(37,99,235,0.35)] overflow-hidden flex flex-col max-h-[92vh]"
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan shadow-[0_0_15px_rgba(56,189,248,0.25)]">
-                <Film className="w-5 h-5" />
+          <div className="flex items-center justify-between mb-3 sm:mb-4 shrink-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan shadow-[0_0_15px_rgba(56,189,248,0.25)] shrink-0">
+                <Film className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <h3 className="font-display font-bold text-lg sm:text-xl text-watchmate-text">
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-base sm:text-xl text-watchmate-text truncate">
                   Media Source Selector
                 </h3>
-                <p className="text-xs text-watchmate-secondaryText">
-                  Stream synchronized YouTube, uploaded local movies, or share your live screen
+                <p className="text-[11px] sm:text-xs text-watchmate-secondaryText truncate">
+                  Stream YouTube, uploaded local movies, or share screen
                 </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-full text-watchmate-muted hover:text-watchmate-text hover:bg-watchmate-surface transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full text-watchmate-muted hover:text-watchmate-text hover:bg-watchmate-surface transition-colors cursor-pointer shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
