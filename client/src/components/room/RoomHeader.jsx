@@ -94,18 +94,19 @@ export default function RoomHeader() {
             <button
               onClick={() => setSettingsModalOpen(true)}
               title="Room Preferences"
-              className="p-2 rounded-xl text-watchmate-muted hover:text-watchmate-text bg-watchmate-elevated hover:bg-watchmate-elevatedHover border border-watchmate-border transition-colors"
+              className="p-2 rounded-xl text-watchmate-muted hover:text-watchmate-text bg-watchmate-elevated hover:bg-watchmate-elevatedHover border border-watchmate-border transition-colors cursor-pointer"
             >
               <Settings className="w-4 h-4" />
             </button>
 
-            {/* Leave Room */}
+            {/* Leave Room Button */}
             <button
               onClick={handleLeave}
               title="Leave Room"
-              className="p-2 rounded-xl text-watchmate-muted hover:text-watchmate-error bg-watchmate-elevated hover:bg-watchmate-elevatedHover border border-watchmate-border transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-950/40 hover:bg-red-900/70 border border-red-500/40 hover:border-red-500 text-red-300 hover:text-white transition-all shadow-sm cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Leave</span>
             </button>
           </div>
         </div>
