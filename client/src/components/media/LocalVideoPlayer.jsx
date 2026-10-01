@@ -35,7 +35,8 @@ export default function LocalVideoPlayer({
   const videoRef = externalVideoRef || internalVideoRef;
   const isInternalSyncRef = useRef(false);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [needsAutoplayUnlock, setNeedsAutoplayUnlock] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -59,11 +60,19 @@ export default function LocalVideoPlayer({
     if (!video || !videoUrl) return;
 
     setLoadError(null);
-    setIsLoading(true);
     setNeedsAutoplayUnlock(false);
+
+    // If readyState is already loaded enough
+    if (video.readyState >= 2) {
+      setIsLoading(false);
+      setIsBuffering(false);
+    } else {
+      setIsLoading(true);
+    }
 
     const handleLoadedData = () => {
       setIsLoading(false);
+      setIsBuffering(false);
       const targetTime = getExpectedCurrentTime();
       if (targetTime > 0 && Number.isFinite(targetTime)) {
         try {
@@ -110,12 +119,15 @@ export default function LocalVideoPlayer({
 
       // Play/Pause sync
       if (playback?.isPlaying && video.paused) {
-        video.play().catch(err => {
+        video.play().then(() => {
+          setIsBuffering(false);
+        }).catch(err => {
           console.warn('[LocalVideoPlayer] Play blocked:', err);
           setNeedsAutoplayUnlock(true);
         });
       } else if (!playback?.isPlaying && !video.paused) {
         video.pause();
+        setIsBuffering(false);
       }
     } catch (err) {
       console.warn('[LocalVideoPlayer] Sync error:', err);
@@ -171,6 +183,7 @@ export default function LocalVideoPlayer({
       const time = video.currentTime;
       setCurrentTime(time);
       onTimeUpdate(time);
+      if (isBuffering) setIsBuffering(false);
     }
   };
 
@@ -181,6 +194,7 @@ export default function LocalVideoPlayer({
       setDuration(dur);
       onDurationChange(dur);
       setIsLoading(false);
+      setIsBuffering(false);
     }
   };
 
@@ -188,6 +202,7 @@ export default function LocalVideoPlayer({
     console.warn('[LocalVideoPlayer] Video element error:', e);
     setLoadError('Failed to load video file. Check format or connection.');
     setIsLoading(false);
+    setIsBuffering(false);
   };
 
   const handleVideoClick = () => {
@@ -197,10 +212,12 @@ export default function LocalVideoPlayer({
 
     if (video.paused) {
       video.play().then(() => {
+        setIsBuffering(false);
         emitPlay(video.currentTime);
       }).catch(() => {});
     } else {
       video.pause();
+      setIsBuffering(false);
       emitPause(video.currentTime);
     }
   };
@@ -212,7 +229,9 @@ export default function LocalVideoPlayer({
       video.muted = false;
       const targetTime = getExpectedCurrentTime();
       if (targetTime > 0) video.currentTime = targetTime;
-      video.play().catch(e => console.warn('Unlock failed:', e));
+      video.play().then(() => {
+        setIsBuffering(false);
+      }).catch(e => console.warn('Unlock failed:', e));
     }
   };
 
@@ -236,6 +255,13 @@ export default function LocalVideoPlayer({
             playsInline
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
+            onLoadedData={() => { setIsLoading(false); setIsBuffering(false); }}
+            onCanPlay={() => { setIsLoading(false); setIsBuffering(false); }}
+            onPlaying={() => { setIsLoading(false); setIsBuffering(false); }}
+            onPlay={() => { setIsBuffering(false); }}
+            onPause={() => { setIsBuffering(false); }}
+            onSeeked={() => { setIsBuffering(false); }}
+            onWaiting={() => { if (playback?.isPlaying) setIsBuffering(true); }}
             onError={handleVideoError}
             onClick={handleVideoClick}
             className={`w-full h-full ${objectFitClass} ${isHost ? 'cursor-pointer' : ''}`}
@@ -250,12 +276,12 @@ export default function LocalVideoPlayer({
             />
           )}
 
-          {/* Loading / Buffering Spinner */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-10 pointer-events-none">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-black/70 border border-white/10 text-xs text-watchmate-cyan">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Buffering video...</span>
+          {/* Subtle non-blocking spinner only when genuinely waiting for data while playback is active */}
+          {isBuffering && playback?.isPlaying && (
+            <div className="absolute top-4 right-4 z-20 pointer-events-none">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-[11px] text-watchmate-cyan shadow-lg">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Buffering...</span>
               </div>
             </div>
           )}
