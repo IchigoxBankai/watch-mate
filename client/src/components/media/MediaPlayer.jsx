@@ -332,6 +332,48 @@ export default function MediaPlayer() {
           )}
         </AnimatePresence>
 
+        {/* Synchronized "Start Playing" Overlay for Host & Ready indicator for Guests */}
+        {currentVideo && !playback?.isPlaying && (sourceType === 'youtube' || sourceType === 'local' || sourceType === 'direct') && (
+          <>
+            {isHost ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute inset-0 z-30 bg-black/55 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center select-none"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="px-3.5 py-1 rounded-full bg-watchmate-cyan/15 border border-watchmate-cyan/40 text-watchmate-cyan text-xs font-semibold flex items-center gap-2 shadow-lg">
+                    <span className="w-2 h-2 rounded-full bg-watchmate-cyan animate-pulse" />
+                    <span>Media Loaded & Ready for All Devices</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      emitPlay(currentTime || 0);
+                      setCenterAnimation('play');
+                      setTimeout(() => setCenterAnimation(null), 800);
+                    }}
+                    className="px-8 py-4 rounded-2xl bg-gradient-to-r from-watchmate-primary via-blue-600 to-watchmate-cyan hover:from-blue-600 hover:to-cyan-400 text-white font-display font-bold text-base sm:text-lg shadow-[0_0_40px_rgba(37,99,235,0.7)] flex items-center gap-3 transition-all transform hover:scale-105 active:scale-95 cursor-pointer border border-white/25"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
+                    </div>
+                    <span>Start Playing</span>
+                  </button>
+                  <p className="text-xs text-white/70 max-w-xs leading-relaxed">
+                    Starts synchronized playback simultaneously for everyone in the room without delay.
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="absolute top-16 z-30 px-4 py-2 rounded-full bg-[#07111F]/90 backdrop-blur-md border border-watchmate-cyan/40 text-xs text-watchmate-cyan font-medium flex items-center gap-2 shadow-2xl">
+                <span className="w-2 h-2 rounded-full bg-watchmate-cyan animate-ping" />
+                <span>Media ready • Waiting for Host to start playing...</span>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Floating Top Bar (Title, Source Badge, Change Stream button) */}
         {currentVideo && (
           <div className={`absolute top-3 sm:top-4 inset-x-3 sm:inset-x-4 z-20 transition-opacity duration-300 flex items-center justify-between pointer-events-none ${

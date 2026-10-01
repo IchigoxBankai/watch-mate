@@ -154,9 +154,9 @@ class RoomManager {
       thumbnail: videoData.thumbnail || ''
     };
 
-    // Reset playback position
+    // Reset playback position in paused ready state
     room.playback = {
-      isPlaying: true,
+      isPlaying: false,
       currentTime: 0,
       lastUpdatedAt: Date.now(),
       playbackRate: 1.0,
