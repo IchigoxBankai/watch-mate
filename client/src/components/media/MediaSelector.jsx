@@ -323,14 +323,14 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
           <div className="flex items-center justify-between mb-3 sm:mb-4 shrink-0">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan shadow-[0_0_15px_rgba(56,189,248,0.25)] shrink-0">
-                <Film className="w-4 h-4 sm:w-5 sm:h-5" />
+                {activeTab === 'youtube' ? <Video className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" /> : <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-watchmate-online" />}
               </div>
               <div className="min-w-0">
                 <h3 className="font-display font-bold text-base sm:text-xl text-watchmate-text truncate">
-                  Media Source Selector
+                  {activeTab === 'youtube' ? 'Select YouTube Video' : 'Upload Local Movie'}
                 </h3>
                 <p className="text-[11px] sm:text-xs text-watchmate-secondaryText truncate">
-                  Stream YouTube, uploaded local movies, or share screen
+                  {activeTab === 'youtube' ? 'Search trending videos or paste any YouTube URL' : 'Upload MP4/MKV video with synced playback & optional subtitles'}
                 </p>
               </div>
             </div>
@@ -343,8 +343,8 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
             </button>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-watchmate-surface border border-watchmate-border mb-4 shrink-0">
+          {/* Navigation Tabs (YouTube vs Local Video) */}
+          <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-watchmate-surface border border-watchmate-border mb-4 shrink-0">
             {/* 1. YouTube */}
             <button
               onClick={() => { setActiveTab('youtube'); setErrorMsg(''); }}
@@ -369,19 +369,6 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
             >
               <Upload className="w-3.5 h-3.5 text-watchmate-online" />
               <span>Local Video</span>
-            </button>
-
-            {/* 3. Screen Share */}
-            <button
-              onClick={() => { setActiveTab('screen'); setErrorMsg(''); }}
-              className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'screen'
-                  ? 'bg-gradient-to-r from-watchmate-primary to-watchmate-cyan text-white shadow-md'
-                  : 'text-watchmate-secondaryText hover:text-white hover:bg-watchmate-elevated'
-              }`}
-            >
-              <Monitor className="w-3.5 h-3.5 text-watchmate-cyan" />
-              <span>Screen Share</span>
             </button>
           </div>
 
@@ -597,31 +584,6 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
                   <p>• Your video is uploaded securely and shared with the room.</p>
                   <p>• Every participant's browser independently renders the crystal-clear video with 100% native quality, perfectly synced with the host controls!</p>
                 </div>
-              </div>
-            )}
-
-            {/* ---------------- 3. SCREEN SHARE TAB ---------------- */}
-            {activeTab === 'screen' && (
-              <div className="py-6 flex flex-col items-center justify-center text-center max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-3xl bg-watchmate-cyan/15 border border-watchmate-cyan/35 flex items-center justify-center text-watchmate-cyan mb-4 shadow-[0_0_30px_rgba(56,189,248,0.25)]">
-                  <Monitor className="w-8 h-8" />
-                </div>
-                <h4 className="font-display font-bold text-lg text-watchmate-text mb-1">
-                  Live Screen & Tab Streaming
-                </h4>
-                <p className="text-xs text-watchmate-secondaryText mb-5 leading-relaxed">
-                  Stream any browser tab, desktop app, or full screen directly to everyone via ultra-low latency WebRTC.
-                </p>
-                <button
-                  onClick={handleTriggerScreenShare}
-                  className="btn-primary px-6 py-3 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-xl hover:scale-105 active:scale-95 cursor-pointer"
-                >
-                  <Monitor className="w-4 h-4" />
-                  <span>Start Live Screen Share</span>
-                </button>
-                <p className="text-[11px] text-watchmate-muted mt-3">
-                  Tip: When prompted by your browser, check <strong>"Also share tab audio"</strong> for full audio.
-                </p>
               </div>
             )}
           </div>

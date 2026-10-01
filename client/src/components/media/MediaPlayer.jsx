@@ -332,7 +332,7 @@ export default function MediaPlayer() {
 
                 {/* 3. Screen Share */}
                 <button
-                  onClick={() => openContentPicker('screen')}
+                  onClick={() => startScreenShare && startScreenShare()}
                   className="p-2 sm:p-3.5 rounded-2xl bg-watchmate-surface hover:bg-watchmate-elevated border border-watchmate-border hover:border-watchmate-cyan/50 flex flex-col items-center justify-center gap-1.5 sm:gap-2 group transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-md"
                 >
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-watchmate-cyan/15 border border-watchmate-cyan/30 flex items-center justify-center text-watchmate-cyan group-hover:scale-110 transition-transform">
@@ -340,7 +340,7 @@ export default function MediaPlayer() {
                   </div>
                   <div className="text-center">
                     <span className="block text-[11px] sm:text-xs font-bold text-watchmate-text group-hover:text-watchmate-cyan">Screen Share</span>
-                    <span className="text-[9px] sm:text-[10px] text-watchmate-muted hidden xs:inline">Tab + Audio</span>
+                    <span className="text-[9px] sm:text-[10px] text-watchmate-muted hidden xs:inline">Instant Share</span>
                   </div>
                 </button>
               </div>
