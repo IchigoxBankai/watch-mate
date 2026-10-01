@@ -93,15 +93,16 @@ export default function JoinRoomPage() {
 
           <div>
             <label className="block text-xs font-semibold text-watchmate-text mb-1.5">
-              Enter room code or link
+              Enter 4-Digit Room Code or Link
             </label>
             <input
               type="text"
+              inputMode="numeric"
               required
-              placeholder="e.g. SYNC-7X4K"
+              placeholder="e.g. 4829"
               value={roomCode}
               onChange={(e) => { setRoomCode(e.target.value); setError(''); }}
-              className="w-full px-4 py-3.5 rounded-2xl bg-watchmate-surface border border-watchmate-borderLight focus:border-watchmate-gold text-sm font-mono tracking-widest text-watchmate-text focus:outline-none text-center uppercase placeholder:text-watchmate-muted/60 focus:ring-1 focus:ring-watchmate-gold/50 shadow-inner"
+              className="w-full px-4 py-3.5 rounded-2xl bg-watchmate-surface border border-watchmate-borderLight focus:border-watchmate-gold text-base font-mono tracking-widest text-watchmate-text focus:outline-none text-center uppercase placeholder:text-watchmate-muted/60 focus:ring-1 focus:ring-watchmate-gold/50 shadow-inner"
             />
           </div>
 

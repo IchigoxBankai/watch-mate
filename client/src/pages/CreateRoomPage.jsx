@@ -26,12 +26,8 @@ export default function CreateRoomPage() {
   const [loading, setLoading] = useState(false);
 
   const generateRoomId = () => {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    let code = 'SYNC-';
-    for (let i = 0; i < 4; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code.toLowerCase();
+    // 4-digit pure numeric room passcode (e.g. 1000 to 9999)
+    return Math.floor(1000 + Math.random() * 9000).toString();
   };
 
   const handleCreate = (e) => {
