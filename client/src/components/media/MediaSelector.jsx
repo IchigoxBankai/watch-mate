@@ -3,16 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
   Film, 
-  Link as LinkIcon, 
   Video, 
   Upload, 
   Play, 
   Check, 
-  Sparkles, 
   Monitor, 
   Subtitles,
   Search,
-  Radio,
   Loader2,
   TrendingUp,
   AlertCircle,
@@ -54,45 +51,6 @@ export const parseYouTubeId = (url) => {
 
   return null;
 };
-
-const SAMPLE_VIDEOS = [
-  {
-    id: 'sample-1',
-    title: 'Big Buck Bunny (4K Ultra HD)',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    duration: 596,
-    type: 'direct',
-    thumbnail: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=800&q=80',
-    description: 'Classic open movie project animation with vibrant colors and rich action.'
-  },
-  {
-    id: 'sample-2',
-    title: 'Elephants Dream (Cinematic Animation)',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    duration: 653,
-    type: 'direct',
-    thumbnail: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
-    description: 'Atmospheric sci-fi journey with deep spatial design.'
-  },
-  {
-    id: 'sample-3',
-    title: 'Sintel - The Dragon Hunt',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-    duration: 887,
-    type: 'direct',
-    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
-    description: 'Emotional fantasy story of courage, connection, and companionship.'
-  },
-  {
-    id: 'sample-4',
-    title: 'Tears of Steel (Sci-Fi Visual Effects)',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    duration: 734,
-    type: 'direct',
-    thumbnail: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80',
-    description: 'High-octane futuristic thriller in a dystopian cybernetic world.'
-  }
-];
 
 const INITIAL_YOUTUBE_RESULTS = [
   {
@@ -171,8 +129,7 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
   const { currentVideo, emitChangeVideo, startScreenShare, showToast } = useRoom();
   const { currentUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const [directUrl, setDirectUrl] = useState('');
+  const [activeTab, setActiveTab] = useState(initialTab || 'youtube');
   const [customTitle, setCustomTitle] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -343,28 +300,6 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
     reader.readAsText(file);
   };
 
-  const handleSelectSample = (sample) => {
-    emitChangeVideo(sample);
-    showToast(`Loaded sample: ${sample.title}`, 'info');
-    onClose();
-  };
-
-  const handleApplyDirectUrl = (e) => {
-    e.preventDefault();
-    if (!directUrl.trim()) return;
-
-    emitChangeVideo({
-      id: `custom-url-${Date.now()}`,
-      title: customTitle.trim() || 'Direct Video Stream',
-      url: directUrl.trim(),
-      type: 'direct',
-      duration: 0,
-      thumbnail: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80'
-    });
-    showToast('Loaded direct video stream', 'info');
-    onClose();
-  };
-
   const handleTriggerScreenShare = async () => {
     onClose();
     if (startScreenShare) {
@@ -408,70 +343,44 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-watchmate-surface border border-watchmate-border mb-4 shrink-0 overflow-x-auto scrollbar-none">
+          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-watchmate-surface border border-watchmate-border mb-4 shrink-0">
             {/* 1. YouTube */}
             <button
               onClick={() => { setActiveTab('youtube'); setErrorMsg(''); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'youtube'
                   ? 'bg-red-600 text-white shadow-md'
                   : 'text-watchmate-secondaryText hover:text-white hover:bg-watchmate-elevated'
               }`}
             >
               <Video className="w-3.5 h-3.5 text-white" />
-              <span>1. YouTube</span>
+              <span>YouTube</span>
             </button>
 
             {/* 2. Local Video Upload */}
             <button
               onClick={() => { setActiveTab('upload'); setErrorMsg(''); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'upload'
                   ? 'bg-gradient-to-r from-watchmate-primary to-watchmate-cyan text-white shadow-md'
                   : 'text-watchmate-secondaryText hover:text-white hover:bg-watchmate-elevated'
               }`}
             >
               <Upload className="w-3.5 h-3.5 text-watchmate-online" />
-              <span>2. Local Video</span>
+              <span>Local Video</span>
             </button>
 
             {/* 3. Screen Share */}
             <button
               onClick={() => { setActiveTab('screen'); setErrorMsg(''); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'screen'
                   ? 'bg-gradient-to-r from-watchmate-primary to-watchmate-cyan text-white shadow-md'
                   : 'text-watchmate-secondaryText hover:text-white hover:bg-watchmate-elevated'
               }`}
             >
               <Monitor className="w-3.5 h-3.5 text-watchmate-cyan" />
-              <span>3. Screen Share</span>
-            </button>
-
-            {/* 4. 4K Cinema Samples */}
-            <button
-              onClick={() => { setActiveTab('samples'); setErrorMsg(''); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                activeTab === 'samples'
-                  ? 'bg-gradient-to-r from-watchmate-primary to-watchmate-cyan text-white shadow-md'
-                  : 'text-watchmate-secondaryText hover:text-white hover:bg-watchmate-elevated'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-watchmate-gold" />
-              <span>4K Samples</span>
-            </button>
-
-            {/* 5. Direct Link */}
-            <button
-              onClick={() => { setActiveTab('url'); setErrorMsg(''); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                activeTab === 'url'
-                  ? 'bg-gradient-to-r from-watchmate-primary to-watchmate-cyan text-white shadow-md'
-                  : 'text-watchmate-secondaryText hover:text-white hover:bg-watchmate-elevated'
-              }`}
-            >
-              <LinkIcon className="w-3.5 h-3.5 text-watchmate-brightBlue" />
-              <span>Direct Link</span>
+              <span>Screen Share</span>
             </button>
           </div>
 
@@ -713,96 +622,6 @@ export default function MediaSelector({ isOpen, onClose, onSetSubtitleCues, init
                   Tip: When prompted by your browser, check <strong>"Also share tab audio"</strong> for full audio.
                 </p>
               </div>
-            )}
-
-            {/* ---------------- 4. 4K SAMPLES TAB ---------------- */}
-            {activeTab === 'samples' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {SAMPLE_VIDEOS.map((sample) => {
-                  const isCurrent = currentVideo?.id === sample.id || currentVideo?.url === sample.url;
-                  return (
-                    <div
-                      key={sample.id}
-                      onClick={() => handleSelectSample(sample)}
-                      className={`group relative rounded-2xl overflow-hidden cursor-pointer border transition-all p-3 flex flex-col justify-between ${
-                        isCurrent 
-                          ? 'bg-gradient-to-b from-watchmate-primary/20 to-watchmate-surface border-watchmate-cyan shadow-[0_0_20px_rgba(56,189,248,0.3)] ring-1 ring-watchmate-cyan/50' 
-                          : 'bg-watchmate-surface border-watchmate-border hover:border-watchmate-cyan/50 hover:bg-watchmate-elevated shadow-sm'
-                      }`}
-                    >
-                      <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-black border border-watchmate-border">
-                        <img 
-                          src={sample.thumbnail} 
-                          alt={sample.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90" 
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-10 h-10 rounded-full btn-primary flex items-center justify-center shadow-lg">
-                            <Play className="w-4 h-4 fill-current ml-0.5" />
-                          </div>
-                        </div>
-                        {isCurrent && (
-                          <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-md bg-watchmate-gold text-black text-[10px] font-bold flex items-center gap-1 shadow-md">
-                            <Check className="w-3 h-3" />
-                            Playing
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <h4 className="font-semibold text-sm text-watchmate-text line-clamp-1 mb-1 group-hover:text-watchmate-cyan transition-colors">
-                          {sample.title}
-                        </h4>
-                        <p className="text-xs text-watchmate-secondaryText line-clamp-2">
-                          {sample.description}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ---------------- 5. DIRECT URL TAB ---------------- */}
-            {activeTab === 'url' && (
-              <form onSubmit={handleApplyDirectUrl} className="space-y-4 py-2">
-                <div>
-                  <label className="block text-xs font-semibold text-watchmate-text mb-1.5">
-                    Direct Video Stream URL (MP4 / WebM / HLS)
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://example.com/movie.mp4"
-                    value={directUrl}
-                    onChange={(e) => setDirectUrl(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-watchmate-elevated border border-watchmate-border focus:border-watchmate-cyan text-sm text-watchmate-text focus:outline-none placeholder:text-watchmate-muted/60"
-                  />
-                  <p className="text-[11px] text-watchmate-muted mt-1.5">
-                    Works with any publicly accessible MP4, WebM, or direct CDN video streaming link.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-watchmate-text mb-1.5">
-                    Video Title (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Custom Stream"
-                    value={customTitle}
-                    onChange={(e) => setCustomTitle(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-watchmate-elevated border border-watchmate-border focus:border-watchmate-cyan text-sm text-watchmate-text focus:outline-none placeholder:text-watchmate-muted/60"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full btn-primary py-3.5 rounded-2xl text-sm font-semibold shadow-lg transition-all cursor-pointer"
-                >
-                  Load Direct Video
-                </button>
-              </form>
             )}
           </div>
         </motion.div>
