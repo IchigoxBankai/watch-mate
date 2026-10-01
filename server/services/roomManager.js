@@ -48,11 +48,19 @@ class RoomManager {
     return this.rooms.has(roomId);
   }
 
-  joinRoom(roomId, user, socketId) {
+  joinRoom(roomId, user, socketId, { isCreator = false, roomName, settings } = {}) {
     let room = this.rooms.get(roomId);
     if (!room) {
-      // Auto-create if user is joining a fresh generated ID
-      room = this.createRoom({ roomId, name: `Room ${roomId.toUpperCase()}`, hostUser: user });
+      if (!isCreator) {
+        return null;
+      }
+      // Create room if explicitly created by host
+      room = this.createRoom({
+        roomId,
+        name: roomName || `Room ${roomId.toUpperCase()}`,
+        hostUser: user,
+        settings: settings || {}
+      });
     }
 
     // If participant was already in room with an older socket, clean up old socket mapping

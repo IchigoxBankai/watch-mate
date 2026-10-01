@@ -26,6 +26,7 @@ export function RoomProvider({ children }) {
   const [pickerInitialTab, setPickerInitialTab] = useState('youtube');
   const [isJoining, setIsJoining] = useState(false);
   const [joinStep, setJoinStep] = useState(''); // 'Connecting...', 'Finding everyone...', 'You\'re in.'
+  const [roomNotFound, setRoomNotFound] = useState(false);
   const [error, setError] = useState(null);
 
   const socket = socketService.getSocket();
@@ -99,19 +100,26 @@ export function RoomProvider({ children }) {
   }, [socket, roomId]);
 
   // Join Room flow
-  const joinRoom = useCallback(async (targetRoomId, user) => {
+  const joinRoom = useCallback(async (targetRoomId, user, options = {}) => {
     if (!targetRoomId || !user) return;
     const cleanId = targetRoomId.trim().toLowerCase();
     
     setIsJoining(true);
     setError(null);
+    setRoomNotFound(false);
     setJoinStep('Connecting to room...');
 
     setTimeout(() => {
       setJoinStep('Finding everyone...');
     }, 400);
 
-    socket.emit('room:join', { roomId: cleanId, user });
+    socket.emit('room:join', { 
+      roomId: cleanId, 
+      user,
+      isCreator: !!options.isCreator,
+      roomName: options.roomName,
+      settings: options.settings
+    });
     setRoomId(cleanId);
   }, [socket]);
 
@@ -130,6 +138,7 @@ export function RoomProvider({ children }) {
     setParticipants([]);
     setCurrentVideo(null);
     setIsJoining(false);
+    setRoomNotFound(false);
   }, [socket, roomId, screenStream]);
 
   // Screen Sharing
@@ -146,25 +155,55 @@ export function RoomProvider({ children }) {
 
   const startScreenShare = useCallback(async () => {
     try {
-      let stream;
+      // Check if getDisplayMedia is supported on this browser/device
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+        showToast('Screen sharing is not supported on this mobile browser. Please use a desktop browser to share your screen.', 'error');
+        return null;
+      }
+
+      let stream = null;
+
+      // 1. Try Desktop rich constraints (cursor + echo-cancelled audio)
       try {
         stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: 'always'
-          },
-          audio: true
+          video: { cursor: 'always' },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: false,
+            suppressLocalAudioPlayback: false
+          }
         });
-      } catch (audioErr) {
-        if (audioErr.name === 'NotAllowedError') {
-          throw audioErr;
+      } catch (e1) {
+        if (e1.name === 'NotAllowedError') throw e1;
+
+        // 2. Try simple boolean audio + video
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true
+          });
+        } catch (e2) {
+          if (e2.name === 'NotAllowedError') throw e2;
+
+          // 3. Fallback to video only (essential for Android mobile browsers which reject display audio)
+          try {
+            stream = await navigator.mediaDevices.getDisplayMedia({
+              video: true,
+              audio: false
+            });
+          } catch (e3) {
+            if (e3.name === 'NotAllowedError') throw e3;
+            // 4. Last attempt: pure video
+            stream = await navigator.mediaDevices.getDisplayMedia({
+              video: true
+            });
+          }
         }
-        // Fallback without audio constraint for full screen capture compatibility
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: 'always'
-          },
-          audio: false
-        });
+      }
+
+      if (!stream) {
+        throw new Error('No media stream returned');
       }
 
       setScreenStream(stream);
@@ -193,8 +232,13 @@ export function RoomProvider({ children }) {
       return stream;
     } catch (err) {
       console.warn('Screen share error:', err);
-      if (err.name !== 'NotAllowedError') {
-        showToast('Could not start screen share', 'error');
+      if (err.name === 'NotAllowedError') {
+        // User dismissed the screen share picker
+        return null;
+      } else if (err.name === 'NotSupportedError' || /mobile|iphone|ipad|android/i.test(navigator.userAgent)) {
+        showToast('Screen sharing is not supported on this mobile device/browser. Please use a desktop browser.', 'error');
+      } else {
+        showToast('Could not start screen share. Please check browser permissions.', 'error');
       }
       return null;
     }
@@ -307,6 +351,14 @@ export function RoomProvider({ children }) {
       showToast(message, type);
     };
 
+    // Room Not Found (Wrong or non-existent code)
+    const handleRoomNotFound = ({ roomId: missingId, message }) => {
+      setError(message || 'Room does not exist');
+      setRoomNotFound(true);
+      setIsJoining(false);
+      showToast(message || 'Room does not exist', 'error');
+    };
+
     // Room Error
     const handleRoomError = ({ message }) => {
       setError(message);
@@ -342,6 +394,7 @@ export function RoomProvider({ children }) {
     socket.on('sync:video_changed', handleVideoChanged);
     socket.on('room:settings_updated', handleSettingsUpdated);
     socket.on('room:toast', handleServerToast);
+    socket.on('room:not_found', handleRoomNotFound);
     socket.on('room:error', handleRoomError);
     socket.on('room:kicked', handleKicked);
     socket.on('room:host_transferred', handleHostTransferred);
@@ -358,6 +411,7 @@ export function RoomProvider({ children }) {
       socket.off('sync:video_changed', handleVideoChanged);
       socket.off('room:settings_updated', handleSettingsUpdated);
       socket.off('room:toast', handleServerToast);
+      socket.off('room:not_found', handleRoomNotFound);
       socket.off('room:error', handleRoomError);
       socket.off('room:kicked', handleKicked);
       socket.off('room:host_transferred', handleHostTransferred);
@@ -373,6 +427,8 @@ export function RoomProvider({ children }) {
     syncStatus,
     isJoining,
     joinStep,
+    roomNotFound,
+    setRoomNotFound,
     error,
     toastNotification,
     countdownState,

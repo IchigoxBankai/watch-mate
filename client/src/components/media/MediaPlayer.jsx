@@ -6,10 +6,12 @@ import {
   Video, 
   Monitor, 
   Upload, 
-  Compass,
-  Crown,
-  Play,
-  Pause
+  Compass, 
+  Crown, 
+  Play, 
+  Pause,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
 import { useAuth } from '../../context/AuthContext';
@@ -135,16 +137,80 @@ export default function MediaPlayer() {
     }
   };
 
-  const handleToggleFullscreen = () => {
+  // Listen for fullscreen change events (ESC key, browser UI, orientation change)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFs = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      setIsFullscreen(isFs);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    if (!document.fullscreenElement) {
-      container.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    const isCurrentlyFullscreen = !!(
+      document.fullscreenElement || 
+      document.webkitFullscreenElement || 
+      document.mozFullScreenElement || 
+      document.msFullscreenElement
+    );
+
+    if (!isCurrentlyFullscreen) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {
+          const video = container.querySelector('video');
+          if (video?.webkitEnterFullscreen) {
+            video.webkitEnterFullscreen();
+          }
+        });
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+        setIsFullscreen(true);
+      } else if (container.mozRequestFullScreen) {
+        container.mozRequestFullScreen();
+        setIsFullscreen(true);
+      } else if (container.msRequestFullscreen) {
+        container.msRequestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        const video = container.querySelector('video');
+        if (video?.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen();
+        }
+      }
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+        setIsFullscreen(false);
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+        setIsFullscreen(false);
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+        setIsFullscreen(false);
+      }
     }
-  };
+  }, []);
 
   // Auto-hide controls during playback after 3.5 seconds
   useEffect(() => {
@@ -259,6 +325,8 @@ export default function MediaPlayer() {
                 onStopSharing={stopScreenShare}
                 volume={volume}
                 isMuted={isMuted}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
               />
             );
           }
@@ -402,9 +470,9 @@ export default function MediaPlayer() {
               )}
             </div>
 
-            {/* Change Media Button (Host Only) */}
-            {isHost && (
-              <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+              {/* Change Media Button (Host Only) */}
+              {isHost && (
                 <button
                   onClick={() => openContentPicker(currentVideo.type || 'youtube')}
                   className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#07111F]/85 hover:bg-watchmate-surface backdrop-blur-md border border-watchmate-border hover:border-watchmate-cyan/50 text-white text-[11px] sm:text-xs font-semibold shadow-lg transition-all cursor-pointer"
@@ -413,8 +481,23 @@ export default function MediaPlayer() {
                   <Film className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
                   <span className="hidden xs:inline">Change Media</span>
                 </button>
-              </div>
-            )}
+              )}
+
+              {/* Fullscreen Quick Button (Visible across all video modes) */}
+              <button
+                onClick={handleToggleFullscreen}
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#07111F]/85 hover:bg-watchmate-surface backdrop-blur-md border border-watchmate-border hover:border-watchmate-cyan/50 text-white text-[11px] sm:text-xs font-semibold shadow-lg transition-all cursor-pointer"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                data-no-toggle="true"
+              >
+                {isFullscreen ? (
+                  <Minimize className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
+                ) : (
+                  <Maximize className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
+                )}
+                <span className="hidden xs:inline">{isFullscreen ? 'Exit' : 'Maximize'}</span>
+              </button>
+            </div>
           </div>
         )}
 

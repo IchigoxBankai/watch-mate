@@ -2,16 +2,36 @@ import { roomManager } from '../services/roomManager.js';
 
 export function registerRoomHandlers(io, socket) {
   // Join Room
-  socket.on('room:join', ({ roomId, user }) => {
+  socket.on('room:join', ({ roomId, user, isCreator, roomName, settings }) => {
     if (!roomId || !user || !user.id) {
       socket.emit('room:error', { message: 'Invalid join credentials' });
       return;
     }
 
     const cleanRoomId = roomId.trim().toLowerCase();
+
+    // Check if room exists before auto-joining
+    const exists = roomManager.hasRoom(cleanRoomId);
+    if (!exists && !isCreator) {
+      socket.emit('room:not_found', { 
+        roomId: cleanRoomId,
+        message: `Room "${cleanRoomId.toUpperCase()}" does not exist.` 
+      });
+      return;
+    }
+
+    const joinResult = roomManager.joinRoom(cleanRoomId, user, socket.id, { isCreator, roomName, settings });
+    if (!joinResult) {
+      socket.emit('room:not_found', { 
+        roomId: cleanRoomId,
+        message: `Room "${cleanRoomId.toUpperCase()}" does not exist.` 
+      });
+      return;
+    }
+
     socket.join(cleanRoomId);
 
-    const { room, participant } = roomManager.joinRoom(cleanRoomId, user, socket.id);
+    const { room, participant } = joinResult;
     const fullState = roomManager.getPublicRoomState(cleanRoomId);
 
     // Send complete current room snapshot to the joining user

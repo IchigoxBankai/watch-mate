@@ -69,8 +69,16 @@ export function StreamProvider({ children }) {
     // When remote track arrives on viewer's device
     pc.ontrack = (event) => {
       console.log('[StreamContext] Remote stream track received:', event.track.kind);
-      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
-      setRemoteStream(stream);
+      if (event.streams && event.streams[0]) {
+        setRemoteStream(new MediaStream(event.streams[0].getTracks()));
+      } else {
+        setRemoteStream(prev => {
+          if (!prev) return new MediaStream([event.track]);
+          const tracks = prev.getTracks().filter(t => t.id !== event.track.id);
+          tracks.push(event.track);
+          return new MediaStream(tracks);
+        });
+      }
     };
 
     pc.onconnectionstatechange = () => {

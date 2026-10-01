@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Monitor, StopCircle, Volume2, VolumeX, AlertCircle, Film, Radio } from 'lucide-react';
+import { Monitor, StopCircle, Volume2, VolumeX, AlertCircle, Film, Radio, Maximize, Minimize } from 'lucide-react';
 import { useRoom } from '../../context/RoomContext';
 import { useStream } from '../../context/StreamContext';
 
@@ -8,7 +8,9 @@ export default function ScreenSharePlayer({
   isSharing, 
   onStopSharing, 
   volume = 1.0, 
-  isMuted = false 
+  isMuted = false,
+  isFullscreen = false,
+  onToggleFullscreen
 }) {
   const videoRef = useRef(null);
   const { openContentPicker } = useRoom();
@@ -16,6 +18,7 @@ export default function ScreenSharePlayer({
 
   const [hasAudioTrack, setHasAudioTrack] = useState(false);
   const [isGuestMuted, setIsGuestMuted] = useState(false);
+  const lastTapRef = useRef(0);
 
   const activeStream = stream || remoteStream;
 
@@ -49,59 +52,114 @@ export default function ScreenSharePlayer({
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.volume = volume;
-      videoRef.current.muted = isMuted || isGuestMuted;
+      if (isSharing) {
+        videoRef.current.muted = true;
+        videoRef.current.volume = 0;
+      } else {
+        videoRef.current.volume = volume;
+        videoRef.current.muted = isMuted || isGuestMuted;
+      }
     }
-  }, [volume, isMuted, isGuestMuted]);
+  }, [volume, isMuted, isGuestMuted, isSharing]);
 
-  const handleUnmuteGuest = () => {
-    if (videoRef.current) {
+  const handleUnmuteGuest = (e) => {
+    e?.stopPropagation();
+    if (videoRef.current && !isSharing) {
       videoRef.current.muted = false;
       setIsGuestMuted(false);
       videoRef.current.play().catch(() => {});
     }
   };
 
+  const handleFullscreenClick = (e) => {
+    e?.stopPropagation();
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+    } else {
+      const video = videoRef.current;
+      if (video?.webkitEnterFullscreen) {
+        video.webkitEnterFullscreen();
+      } else if (video?.requestFullscreen) {
+        video.requestFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  // Double tap to fullscreen on mobile
+  const handleTouchEnd = (e) => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      handleFullscreenClick(e);
+    }
+    lastTapRef.current = now;
+  };
+
   return (
-    <div className="w-full h-full relative bg-black flex items-center justify-center overflow-hidden">
+    <div 
+      onTouchEnd={handleTouchEnd}
+      onDoubleClick={handleFullscreenClick}
+      className="w-full h-full relative bg-black flex items-center justify-center overflow-hidden"
+    >
       {activeStream ? (
         <>
           <video
             ref={videoRef}
             autoPlay
             playsInline
+            webkit-playsinline="true"
+            muted={isSharing || isMuted || isGuestMuted}
             className="w-full h-full object-contain"
           />
 
           {/* Floating Top Screen Share HUD */}
-          <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30 flex items-center gap-2">
+          <div className="absolute top-2.5 sm:top-4 right-2.5 sm:right-4 z-30 flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
             {/* Audio Capability Status */}
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-[11px] sm:text-xs font-semibold shadow-lg ${
+            <div className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full backdrop-blur-md border text-[10px] sm:text-xs font-semibold shadow-lg ${
               hasAudioTrack 
-                ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' 
-                : 'bg-black/70 border-white/10 text-watchmate-muted'
+                ? 'bg-emerald-950/85 border-emerald-500/40 text-emerald-300' 
+                : 'bg-black/75 border-white/15 text-watchmate-muted'
             }`}>
-              {hasAudioTrack ? <Volume2 className="w-3.5 h-3.5 text-emerald-400" /> : <VolumeX className="w-3.5 h-3.5 text-watchmate-muted" />}
-              <span>{hasAudioTrack ? 'Screen sharing with audio' : 'Screen sharing without audio'}</span>
+              {hasAudioTrack ? <Volume2 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-emerald-400" /> : <VolumeX className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-muted" />}
+              <span>{hasAudioTrack ? (isSharing ? 'Sharing tab audio' : 'Screen audio ON') : 'No audio'}</span>
             </div>
+
+            {/* Fullscreen / Maximize Button */}
+            <button
+              onClick={handleFullscreenClick}
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-black/80 hover:bg-watchmate-surface backdrop-blur-md border border-watchmate-cyan/40 hover:border-watchmate-cyan text-white text-[10px] sm:text-xs font-semibold transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Maximize to Fullscreen'}
+              data-no-toggle="true"
+            >
+              {isFullscreen ? (
+                <Minimize className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
+              ) : (
+                <Maximize className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-watchmate-cyan" />
+              )}
+              <span>{isFullscreen ? 'Exit' : 'Full Screen'}</span>
+            </button>
 
             {/* Stop Sharing Button (Host only) */}
             {isSharing && (
               <button
-                onClick={onStopSharing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-watchmate-error/90 hover:bg-watchmate-error text-white text-xs font-bold transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStopSharing();
+                }}
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-watchmate-error/90 hover:bg-watchmate-error text-white text-[10px] sm:text-xs font-bold transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
+                data-no-toggle="true"
               >
-                <StopCircle className="w-3.5 h-3.5" />
-                <span>Stop Sharing</span>
+                <StopCircle className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                <span>Stop</span>
               </button>
             )}
           </div>
 
           {/* Guest Unmute Audio Banner if muted by browser autoplay policy */}
-          {isGuestMuted && (
+          {!isSharing && isGuestMuted && (
             <button
               onClick={handleUnmuteGuest}
               className="absolute bottom-4 z-30 px-4 py-2 rounded-full bg-watchmate-primary/95 hover:bg-watchmate-primary text-white text-xs font-bold shadow-2xl flex items-center gap-2 border border-white/20 animate-bounce cursor-pointer backdrop-blur-md"
+              data-no-toggle="true"
             >
               <Volume2 className="w-4 h-4" />
               <span>Tap to Unmute Audio</span>

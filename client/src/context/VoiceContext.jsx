@@ -151,12 +151,16 @@ export function VoiceProvider({ children }) {
     setVoiceError(null);
 
     try {
-      // Request audio stream
+      // Request audio stream with strict acoustic echo cancellation
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          googEchoCancellation: { ideal: true },
+          googAutoGainControl: { ideal: true },
+          googNoiseSuppression: { ideal: true },
+          googHighpassFilter: { ideal: true }
         },
         video: false
       });
