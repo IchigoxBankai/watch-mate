@@ -32,12 +32,18 @@ export default function ScreenSharePlayer({
     const video = videoRef.current;
     if (video && activeStream) {
       video.srcObject = activeStream;
-      video.play().catch(err => {
-        console.warn('[ScreenSharePlayer] Autoplay prevented, muting audio to start video frames:', err);
-        video.muted = true;
-        setIsGuestMuted(true);
-        video.play().catch(() => {});
-      });
+      const playVideo = () => {
+        video.play().catch(err => {
+          console.warn('[ScreenSharePlayer] Autoplay prevented, muting audio to start video frames:', err);
+          video.muted = true;
+          setIsGuestMuted(true);
+          video.play().catch(() => {});
+        });
+      };
+      playVideo();
+      video.onloadedmetadata = () => {
+        playVideo();
+      };
     }
   }, [activeStream]);
 

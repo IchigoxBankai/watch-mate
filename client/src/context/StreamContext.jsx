@@ -11,7 +11,8 @@ const ICE_SERVERS = {
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' }
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
   ]
 };
 
@@ -32,7 +33,7 @@ export function StreamProvider({ children }) {
 
   // Create Peer Connection for sending or receiving stream
   const createStreamPeerConnection = useCallback((targetSocketId) => {
-    // If peer connection already exists, close old one
+    // Clean up previous connection if any
     const existing = peerConnectionsRef.current.get(targetSocketId);
     if (existing) {
       try { existing.close(); } catch (e) {}
@@ -41,11 +42,17 @@ export function StreamProvider({ children }) {
 
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // If we are broadcasting, add local media tracks
+    // If host is broadcasting, add local media tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         pc.addTrack(track, localStreamRef.current);
       });
+    } else {
+      // Receiver specifies recvonly transceivers for video and audio
+      try {
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+      } catch (e) {}
     }
 
     // ICE Candidates
@@ -61,18 +68,9 @@ export function StreamProvider({ children }) {
 
     // When remote track arrives on viewer's device
     pc.ontrack = (event) => {
-      console.log('[StreamContext] Remote track received:', event.track.kind);
-      const [stream] = event.streams;
-      if (stream) {
-        setRemoteStream(stream);
-      } else {
-        // Fallback if event.streams is empty
-        setRemoteStream(prev => {
-          const newStream = prev || new MediaStream();
-          newStream.addTrack(event.track);
-          return new MediaStream(newStream.getTracks());
-        });
-      }
+      console.log('[StreamContext] Remote stream track received:', event.track.kind);
+      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+      setRemoteStream(stream);
     };
 
     pc.onconnectionstatechange = () => {
@@ -86,8 +84,8 @@ export function StreamProvider({ children }) {
     return pc;
   }, [socket, currentUser]);
 
-  // Host starts broadcasting a MediaStream (from local video capture or screen)
-  const startBroadcast = useCallback(async (mediaStream, streamType = 'local_video', title = '') => {
+  // Host starts broadcasting a MediaStream (from screen share)
+  const startBroadcast = useCallback(async (mediaStream, streamType = 'screen', title = '') => {
     if (!roomId || !mediaStream) return;
 
     localStreamRef.current = mediaStream;
@@ -147,7 +145,7 @@ export function StreamProvider({ children }) {
   useEffect(() => {
     if (!socket) return;
 
-    // A viewer asked for the stream
+    // A viewer asked for the stream (e.g. late joiner)
     const handleStreamRequested = async ({ requesterSocketId }) => {
       if (localStreamRef.current && requesterSocketId) {
         const pc = createStreamPeerConnection(requesterSocketId);
@@ -168,7 +166,6 @@ export function StreamProvider({ children }) {
     // Broadcast started event
     const handleBroadcastStarted = ({ streamType, title }) => {
       setStreamInfo({ streamType, title });
-      requestStreamFromHost();
     };
 
     // Broadcast stopped event
@@ -186,7 +183,10 @@ export function StreamProvider({ children }) {
     const handleStreamSignal = async ({ callerSocketId, signal, fromUserId }) => {
       try {
         if (signal.type === 'offer') {
-          const pc = createStreamPeerConnection(callerSocketId);
+          let pc = peerConnectionsRef.current.get(callerSocketId);
+          if (!pc || pc.signalingState === 'closed') {
+            pc = createStreamPeerConnection(callerSocketId);
+          }
           await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
           // Drain queued ICE candidates
@@ -208,7 +208,7 @@ export function StreamProvider({ children }) {
           });
         } else if (signal.type === 'answer') {
           const pc = peerConnectionsRef.current.get(callerSocketId);
-          if (pc) {
+          if (pc && pc.signalingState === 'have-local-offer') {
             await pc.setRemoteDescription(new RTCSessionDescription(signal));
             // Drain queued ICE candidates
             const queue = candidateQueueRef.current.get(callerSocketId) || [];
@@ -251,14 +251,19 @@ export function StreamProvider({ children }) {
       socket.off('stream:broadcast_stopped', handleBroadcastStopped);
       socket.off('stream:signal', handleStreamSignal);
     };
-  }, [socket, currentUser, createStreamPeerConnection, requestStreamFromHost]);
+  }, [socket, currentUser, createStreamPeerConnection]);
 
   // Request stream automatically when a guest joins a room where a screen share is active
   useEffect(() => {
     if (currentVideo && (currentVideo.type === 'screen' || currentVideo.type === 'screen_share') && !isHost) {
-      requestStreamFromHost();
+      const timer = setTimeout(() => {
+        if (!remoteStream) {
+          requestStreamFromHost();
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [currentVideo?.id, currentVideo?.type, isHost, requestStreamFromHost]);
+  }, [currentVideo?.id, currentVideo?.type, isHost, requestStreamFromHost, remoteStream]);
 
   // Cleanup on unmount
   useEffect(() => {

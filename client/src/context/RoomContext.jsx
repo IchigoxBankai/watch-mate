@@ -135,7 +135,9 @@ export function RoomProvider({ children }) {
   // Screen Sharing
   const stopScreenShare = useCallback(() => {
     if (screenStream) {
-      screenStream.getTracks().forEach(track => track.stop());
+      screenStream.getTracks().forEach(track => {
+        try { track.stop(); } catch (e) {}
+      });
       setScreenStream(null);
     }
     setIsScreenSharing(false);
@@ -144,18 +146,37 @@ export function RoomProvider({ children }) {
 
   const startScreenShare = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: 'always' },
-        audio: true
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always'
+          },
+          audio: true
+        });
+      } catch (audioErr) {
+        if (audioErr.name === 'NotAllowedError') {
+          throw audioErr;
+        }
+        // Fallback without audio constraint for full screen capture compatibility
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always'
+          },
+          audio: false
+        });
+      }
 
       setScreenStream(stream);
       setIsScreenSharing(true);
 
-      // Listen for when user stops sharing via browser bar
-      stream.getVideoTracks()[0].onended = () => {
-        stopScreenShare();
-      };
+      // Listen for when user stops sharing via browser floating bar
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          stopScreenShare();
+        };
+      }
 
       // Set video mode to screen share
       emitChangeVideo({
@@ -167,7 +188,8 @@ export function RoomProvider({ children }) {
         thumbnail: ''
       });
 
-      showToast('Screen sharing started with audio', 'success');
+      const hasAudio = stream.getAudioTracks().length > 0;
+      showToast(hasAudio ? 'Screen sharing started with audio' : 'Screen sharing started (video only)', 'success');
       return stream;
     } catch (err) {
       console.warn('Screen share error:', err);
