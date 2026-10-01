@@ -80,8 +80,8 @@ export function registerWebRTCHandlers(io, socket) {
     });
   });
 
-  // WebRTC Stream Broadcasting (Local Video & Screen Sharing direct to viewers)
-  socket.on('stream:signal', ({ targetSocketId, signal, fromUserId }) => {
+  // WebRTC Screen Sharing & Stream Broadcasting
+  const handleStreamSignal = ({ targetSocketId, signal, fromUserId }) => {
     if (!targetSocketId) return;
 
     io.to(targetSocketId).emit('stream:signal', {
@@ -89,21 +89,32 @@ export function registerWebRTCHandlers(io, socket) {
       signal,
       fromUserId
     });
-  });
+    io.to(targetSocketId).emit('screen:signal', {
+      callerSocketId: socket.id,
+      signal,
+      fromUserId
+    });
+  };
 
-  socket.on('stream:start_broadcast', ({ roomId, streamType, title }) => {
+  const handleStartBroadcast = ({ roomId, streamType = 'screen', title = '' }) => {
     socket.to(roomId).emit('stream:broadcast_started', {
       broadcasterSocketId: socket.id,
       streamType,
       title
     });
-  });
+    socket.to(roomId).emit('screen:start', {
+      broadcasterSocketId: socket.id,
+      streamType,
+      title
+    });
+  };
 
-  socket.on('stream:stop_broadcast', ({ roomId }) => {
+  const handleStopBroadcast = ({ roomId }) => {
     socket.to(roomId).emit('stream:broadcast_stopped');
-  });
+    socket.to(roomId).emit('screen:stop');
+  };
 
-  socket.on('stream:request_stream', ({ roomId }) => {
+  const handleRequestStream = ({ roomId }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
     const host = room.participants.get(room.hostId);
@@ -111,6 +122,21 @@ export function registerWebRTCHandlers(io, socket) {
       io.to(host.socketId).emit('stream:stream_requested', {
         requesterSocketId: socket.id
       });
+      io.to(host.socketId).emit('screen:requested', {
+        requesterSocketId: socket.id
+      });
     }
-  });
+  };
+
+  socket.on('stream:signal', handleStreamSignal);
+  socket.on('screen:signal', handleStreamSignal);
+
+  socket.on('stream:start_broadcast', handleStartBroadcast);
+  socket.on('screen:start', handleStartBroadcast);
+
+  socket.on('stream:stop_broadcast', handleStopBroadcast);
+  socket.on('screen:stop', handleStopBroadcast);
+
+  socket.on('stream:request_stream', handleRequestStream);
+  socket.on('screen:request', handleRequestStream);
 }

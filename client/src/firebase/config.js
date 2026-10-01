@@ -12,6 +12,7 @@ import {
   signInWithPhoneNumber
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -31,6 +32,7 @@ const isFirebaseConfigured = Boolean(
 let app;
 let auth;
 let db;
+let storage;
 let googleProvider;
 
 if (isFirebaseConfigured) {
@@ -38,6 +40,11 @@ if (isFirebaseConfigured) {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
     auth = getAuth(app);
     db = getFirestore(app);
+    try {
+      storage = getStorage(app);
+    } catch (storageErr) {
+      console.warn('[Firebase Storage] Not initialized:', storageErr);
+    }
     googleProvider = new GoogleAuthProvider();
     console.log('[Firebase] Initialized with live configuration');
   } catch (error) {
@@ -49,6 +56,7 @@ export {
   app, 
   auth, 
   db, 
+  storage,
   googleProvider, 
   isFirebaseConfigured,
   signInWithEmailAndPassword,

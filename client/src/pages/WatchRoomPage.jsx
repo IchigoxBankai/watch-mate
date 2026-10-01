@@ -5,7 +5,7 @@ import { useRoom } from '../context/RoomContext';
 import { useAuth } from '../context/AuthContext';
 import { useVoice } from '../context/VoiceContext';
 import RoomHeader from '../components/room/RoomHeader';
-import VideoStage from '../components/room/VideoStage';
+import MediaPlayer from '../components/media/MediaPlayer';
 import ParticipantsPanel from '../components/room/ParticipantsPanel';
 import VoiceControl from '../components/room/VoiceControl';
 import ChatPanel from '../components/room/ChatPanel';
@@ -62,7 +62,7 @@ export default function WatchRoomPage() {
       <main className="flex-1 max-w-[1920px] w-full mx-auto p-3 sm:p-5 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start pb-24 lg:pb-6">
         {/* Left Column: Cinematic Video Stage (8 of 12 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-4">
-          <VideoStage />
+          <MediaPlayer />
         </div>
 
         {/* Right Column: Social Lounge Panel (4 of 12 cols) */}

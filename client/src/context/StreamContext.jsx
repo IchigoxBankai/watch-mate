@@ -253,12 +253,12 @@ export function StreamProvider({ children }) {
     };
   }, [socket, currentUser, createStreamPeerConnection, requestStreamFromHost]);
 
-  // Request stream automatically when a guest joins a room where a local/screen stream is playing
+  // Request stream automatically when a guest joins a room where a screen share is active
   useEffect(() => {
-    if (currentVideo && (currentVideo.type === 'local' || currentVideo.type === 'screen_share') && !isHost) {
+    if (currentVideo && (currentVideo.type === 'screen' || currentVideo.type === 'screen_share') && !isHost) {
       requestStreamFromHost();
     }
-  }, [currentVideo?.id, isHost, requestStreamFromHost]);
+  }, [currentVideo?.id, currentVideo?.type, isHost, requestStreamFromHost]);
 
   // Cleanup on unmount
   useEffect(() => {

@@ -1,8 +1,8 @@
 import { roomManager } from '../services/roomManager.js';
 
 export function registerSyncHandlers(io, socket) {
-  // Client triggers play
-  socket.on('sync:play', ({ roomId, currentTime }) => {
+  // Handler for Play
+  const handlePlay = ({ roomId, currentTime }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
 
@@ -16,30 +16,32 @@ export function registerSyncHandlers(io, socket) {
     }
 
     const participant = room.participants.get(userMeta.userId);
-    const updatedBy = participant ? participant.name : 'Someone';
+    const updatedBy = participant ? participant.name : 'Host';
 
     const playback = roomManager.updatePlayback(roomId, {
       isPlaying: true,
-      currentTime: currentTime || room.playback.currentTime,
+      currentTime: currentTime !== undefined ? currentTime : room.playback.currentTime,
       updatedBy
     });
 
-    // Broadcast play event to all room members (including sender for ack confirmation or to others)
-    socket.to(roomId).emit('sync:play', {
+    const payload = {
       currentTime: playback.currentTime,
+      isPlaying: true,
       updatedBy,
       timestamp: Date.now()
-    });
+    };
 
-    // System banner event
+    socket.to(roomId).emit('sync:play', payload);
+    socket.to(roomId).emit('media:play', payload);
+
     io.to(roomId).emit('room:toast', {
       message: `${updatedBy} started playback`,
       type: 'info'
     });
-  });
+  };
 
-  // Client triggers pause
-  socket.on('sync:pause', ({ roomId, currentTime }) => {
+  // Handler for Pause
+  const handlePause = ({ roomId, currentTime }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
 
@@ -52,7 +54,7 @@ export function registerSyncHandlers(io, socket) {
     }
 
     const participant = room.participants.get(userMeta.userId);
-    const updatedBy = participant ? participant.name : 'Someone';
+    const updatedBy = participant ? participant.name : 'Host';
 
     const playback = roomManager.updatePlayback(roomId, {
       isPlaying: false,
@@ -60,20 +62,24 @@ export function registerSyncHandlers(io, socket) {
       updatedBy
     });
 
-    socket.to(roomId).emit('sync:pause', {
+    const payload = {
       currentTime: playback.currentTime,
+      isPlaying: false,
       updatedBy,
       timestamp: Date.now()
-    });
+    };
+
+    socket.to(roomId).emit('sync:pause', payload);
+    socket.to(roomId).emit('media:pause', payload);
 
     io.to(roomId).emit('room:toast', {
       message: `${updatedBy} paused the room`,
       type: 'info'
     });
-  });
+  };
 
-  // Client seeks
-  socket.on('sync:seek', ({ roomId, currentTime }) => {
+  // Handler for Seek
+  const handleSeek = ({ roomId, currentTime }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
 
@@ -86,19 +92,22 @@ export function registerSyncHandlers(io, socket) {
     }
 
     const participant = room.participants.get(userMeta.userId);
-    const updatedBy = participant ? participant.name : 'Someone';
+    const updatedBy = participant ? participant.name : 'Host';
 
     const playback = roomManager.updatePlayback(roomId, {
       currentTime,
       updatedBy
     });
 
-    socket.to(roomId).emit('sync:seek', {
+    const payload = {
       currentTime: playback.currentTime,
       isPlaying: playback.isPlaying,
       updatedBy,
       timestamp: Date.now()
-    });
+    };
+
+    socket.to(roomId).emit('sync:seek', payload);
+    socket.to(roomId).emit('media:seek', payload);
 
     const formatTime = (secs) => {
       const m = Math.floor(secs / 60);
@@ -110,31 +119,34 @@ export function registerSyncHandlers(io, socket) {
       message: `${updatedBy} jumped to ${formatTime(currentTime)}`,
       type: 'info'
     });
-  });
+  };
 
-  // Request sync state (e.g. late join or drift recovery)
-  socket.on('sync:request_state', ({ roomId }) => {
+  // Handler for Request State (Late Join or Drift recovery)
+  const handleRequestState = ({ roomId }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
 
-    // Calculate elapsed time if playing
     let accurateTime = room.playback.currentTime;
-    if (room.playback.isPlaying) {
+    if (room.playback.isPlaying && room.playback.lastUpdatedAt) {
       const elapsed = (Date.now() - room.playback.lastUpdatedAt) / 1000;
       accurateTime += elapsed;
     }
 
-    socket.emit('sync:current_state', {
+    const statePayload = {
       video: room.currentVideo,
+      media: room.currentVideo,
       playback: {
         ...room.playback,
         currentTime: accurateTime
       }
-    });
-  });
+    };
 
-  // Change Video Source
-  socket.on('sync:change_video', ({ roomId, videoData }) => {
+    socket.emit('sync:current_state', statePayload);
+    socket.emit('media:current_state', statePayload);
+  };
+
+  // Handler for Change Video
+  const handleChangeVideo = ({ roomId, videoData }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
 
@@ -151,11 +163,15 @@ export function registerSyncHandlers(io, socket) {
 
     const updatedRoom = roomManager.changeVideo(roomId, videoData, updatedBy);
 
-    io.to(roomId).emit('sync:video_changed', {
+    const changePayload = {
       video: updatedRoom.currentVideo,
+      media: updatedRoom.currentVideo,
       playback: updatedRoom.playback,
       updatedBy
-    });
+    };
+
+    io.to(roomId).emit('sync:video_changed', changePayload);
+    io.to(roomId).emit('media:source_changed', changePayload);
 
     const changeMsg = roomManager.addMessage(roomId, {
       senderId: 'system',
@@ -166,7 +182,25 @@ export function registerSyncHandlers(io, socket) {
     if (changeMsg) {
       io.to(roomId).emit('chat:new_message', changeMsg);
     }
-  });
+  };
+
+  // Register listeners with multiple alias support
+  socket.on('sync:play', handlePlay);
+  socket.on('media:play', handlePlay);
+
+  socket.on('sync:pause', handlePause);
+  socket.on('media:pause', handlePause);
+
+  socket.on('sync:seek', handleSeek);
+  socket.on('media:seek', handleSeek);
+
+  socket.on('sync:request_state', handleRequestState);
+  socket.on('media:request_state', handleRequestState);
+  socket.on('media:sync', handleRequestState);
+
+  socket.on('sync:change_video', handleChangeVideo);
+  socket.on('media:source', handleChangeVideo);
+  socket.on('media:change_video', handleChangeVideo);
 
   // Playback rate sync
   socket.on('sync:rate', ({ roomId, rate }) => {
@@ -180,9 +214,10 @@ export function registerSyncHandlers(io, socket) {
 
     roomManager.updatePlayback(roomId, { playbackRate: rate });
     socket.to(roomId).emit('sync:rate', { rate });
+    socket.to(roomId).emit('media:rate', { rate });
   });
 
-  // Countdown sync (e.g. for Netflix or external synchronized start)
+  // Countdown sync
   socket.on('sync:countdown', ({ roomId, count = 3, message = 'Starting in' }) => {
     const room = roomManager.getRoom(roomId);
     if (!room) return;
@@ -199,4 +234,5 @@ export function registerSyncHandlers(io, socket) {
     });
   });
 }
+
 
