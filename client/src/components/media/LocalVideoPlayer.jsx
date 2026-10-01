@@ -205,23 +205,6 @@ export default function LocalVideoPlayer({
     setIsBuffering(false);
   };
 
-  const handleVideoClick = () => {
-    if (!isHost) return;
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (video.paused) {
-      video.play().then(() => {
-        setIsBuffering(false);
-        emitPlay(video.currentTime);
-      }).catch(() => {});
-    } else {
-      video.pause();
-      setIsBuffering(false);
-      emitPause(video.currentTime);
-    }
-  };
-
   const handleUnlockAutoplay = () => {
     setNeedsAutoplayUnlock(false);
     const video = videoRef.current;
@@ -263,8 +246,7 @@ export default function LocalVideoPlayer({
             onSeeked={() => { setIsBuffering(false); }}
             onWaiting={() => { if (playback?.isPlaying) setIsBuffering(true); }}
             onError={handleVideoError}
-            onClick={handleVideoClick}
-            className={`w-full h-full ${objectFitClass} ${isHost ? 'cursor-pointer' : ''}`}
+            className={`w-full h-full ${objectFitClass}`}
           />
 
           {/* Subtitles Overlay */}

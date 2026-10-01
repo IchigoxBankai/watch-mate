@@ -146,14 +146,50 @@ export default function MediaPlayer() {
     }
   };
 
-  const handleMouseMove = () => {
-    setShowControls(true);
+  // Auto-hide controls during playback after 3.5 seconds
+  useEffect(() => {
+    if (playback?.isPlaying) {
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+      idleTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3500);
+    } else {
+      setShowControls(true);
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    }
+    return () => {
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    };
+  }, [playback?.isPlaying]);
+
+  // Activity handler (mouse move, touch)
+  const handleUserActivity = () => {
     if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+    setShowControls(true);
     if (playback?.isPlaying) {
       idleTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 3500);
     }
+  };
+
+  // Screen click/tap toggles controls visibility
+  const handleContainerClick = (e) => {
+    // If the click/tap is on any interactive element (buttons, scrubber, speed picker), don't toggle
+    if (e?.target?.closest('button, input, select, textarea, a, [role="button"], [data-no-toggle]')) {
+      return;
+    }
+
+    setShowControls((prev) => {
+      const next = !prev;
+      if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+      if (next && playback?.isPlaying) {
+        idleTimeoutRef.current = setTimeout(() => {
+          setShowControls(false);
+        }, 3500);
+      }
+      return next;
+    });
   };
 
   const sourceType = currentVideo?.type;
@@ -162,13 +198,15 @@ export default function MediaPlayer() {
     <>
       <div 
         ref={containerRef}
-        onMouseMove={handleMouseMove}
+        onClick={handleContainerClick}
+        onMouseMove={handleUserActivity}
+        onTouchStart={handleUserActivity}
         onMouseLeave={() => playback?.isPlaying && setShowControls(false)}
         className={`relative w-full ${
           currentVideo 
             ? 'aspect-video min-h-[220px] sm:min-h-[360px] md:min-h-[460px]' 
             : 'min-h-[280px] sm:min-h-[380px] aspect-auto sm:aspect-video'
-        } bg-[#050C16] rounded-3xl overflow-hidden border border-watchmate-border shadow-[0_0_50px_-10px_rgba(37,99,235,0.25)] group flex items-center justify-center select-none`}
+        } bg-[#050C16] rounded-3xl overflow-hidden border border-watchmate-border shadow-[0_0_50px_-10px_rgba(37,99,235,0.25)] group flex items-center justify-center select-none cursor-default`}
       >
         {/* Floating Reactions Layer */}
         <FloatingReactionsOverlay />
